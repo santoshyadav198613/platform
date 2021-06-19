@@ -18,29 +18,34 @@ export function createTestModule(
     selector: 'test-app',
     template: '<router-outlet></router-outlet>',
   })
-  class AppCmp {}
+  class AppComponent {}
 
   @Component({
     selector: 'page-cmp',
     template: 'page-cmp',
   })
-  class SimpleCmp {}
+  class SimpleComponent {}
 
   TestBed.configureTestingModule({
-    declarations: [AppCmp, SimpleCmp],
+    declarations: [AppComponent, SimpleComponent],
     imports: [
       StoreModule.forRoot(opts.reducers),
       RouterTestingModule.withRoutes([
-        { path: '', component: SimpleCmp },
+        { path: '', component: SimpleComponent },
         {
           path: 'next',
-          component: SimpleCmp,
+          component: SimpleComponent,
           canActivate: ['CanActivateNext'],
         },
         {
           path: 'load',
           loadChildren: 'test',
           canLoad: ['CanLoadNext'],
+        },
+        {
+          path: 'redirect',
+          pathMatch: 'full',
+          redirectTo: 'next',
         },
       ]),
       StoreRouterConnectingModule.forRoot(opts.config),
@@ -65,5 +70,5 @@ export function createTestModule(
     ],
   });
 
-  TestBed.createComponent(AppCmp);
+  TestBed.createComponent(AppComponent);
 }

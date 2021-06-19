@@ -11,6 +11,10 @@ export const COMPLETE_ALL_TODOS = 'COMPLETE_ALL_TODOS';
 
 let _id = 0;
 
+export function resetId() {
+  _id = 0;
+}
+
 export const VisibilityFilters = {
   SHOW_ALL: 'SHOW_ALL',
   SHOW_COMPLETED: 'SHOW_COMPLETED',
@@ -44,10 +48,10 @@ export function todos(
         },
       ];
     case COMPLETE_ALL_TODOS:
-      return state.map(todo => ({ ...todo, completed: true }));
+      return state.map((todo) => ({ ...todo, completed: true }));
     case COMPLETE_TODO:
-      return state.map(
-        todo => (todo.id === payload.id ? { ...todo, completed: true } : todo)
+      return state.map((todo) =>
+        todo.id === payload.id ? { ...todo, completed: true } : todo
       );
     default:
       return state;

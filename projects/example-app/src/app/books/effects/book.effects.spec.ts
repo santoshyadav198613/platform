@@ -1,16 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+
 import { Actions } from '@ngrx/effects';
 import { provideMockActions } from '@ngrx/effects/testing';
 import { cold, getTestScheduler, hot } from 'jasmine-marbles';
 import { Observable } from 'rxjs';
 
-import { GoogleBooksService } from '@example-app/core/services/google-books.service';
 import {
   BooksApiActions,
   FindBookPageActions,
 } from '@example-app/books/actions';
-import { Book } from '@example-app/books/models/book';
-import { BookEffects } from '@example-app/books/effects/book.effects';
+import { BookEffects } from '@example-app/books/effects';
+import { Book } from '@example-app/books/models';
+import { GoogleBooksService } from '@example-app/core/services';
 
 describe('BookEffects', () => {
   let effects: BookEffects;
@@ -29,9 +30,9 @@ describe('BookEffects', () => {
       ],
     });
 
-    effects = TestBed.get(BookEffects);
-    googleBooksService = TestBed.get(GoogleBooksService);
-    actions$ = TestBed.get(Actions);
+    effects = TestBed.inject(BookEffects);
+    googleBooksService = TestBed.inject(GoogleBooksService);
+    actions$ = TestBed.inject(Actions);
   });
 
   describe('search$', () => {
@@ -60,7 +61,7 @@ describe('BookEffects', () => {
       const completion = BooksApiActions.searchFailure({
         errorMsg: 'Unexpected Error. Try again later.',
       });
-      const error = 'Unexpected Error. Try again later.';
+      const error = { message: 'Unexpected Error. Try again later.' };
 
       actions$ = hot('-a---', { a: action });
       const response = cold('-#|', {}, error);

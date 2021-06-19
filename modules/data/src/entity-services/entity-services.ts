@@ -4,9 +4,8 @@ import { Observable } from 'rxjs';
 import { EntityAction } from '../actions/entity-action';
 import { EntityCache } from '../reducers/entity-cache';
 import { EntityCollectionService } from './entity-collection-service';
-import { EntityCollectionServiceFactory } from './entity-collection-service-factory';
 
-// tslint:disable:member-ordering
+/* eslint-disable @typescript-eslint/member-ordering */
 
 /**
  * Class-Interface for EntityCache and EntityCollection services.
@@ -61,7 +60,7 @@ export abstract class EntityServices {
    * @param entityCollectionServiceMap Map of service-name to entity-collection-service
    */
   abstract registerEntityCollectionServices(
-    // tslint:disable-next-line:unified-signatures
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
     entityCollectionServiceMap: EntityCollectionServiceMap
   ): void;
   // #endregion EntityCollectionService creation and registration API

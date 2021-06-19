@@ -3,13 +3,16 @@ import { getCreateEffectMetadata } from './effect_creator';
 import { getEffectDecoratorMetadata } from './effect_decorator';
 
 export function getEffectsMetadata<T>(instance: T): EffectsMetadata<T> {
-  const metadata: EffectsMetadata<T> = {};
-
-  for (const { propertyName, dispatch } of getSourceMetadata(instance)) {
-    metadata[propertyName] = { dispatch };
-  }
-
-  return metadata;
+  return getSourceMetadata(instance).reduce(
+    (
+      acc: EffectsMetadata<T>,
+      { propertyName, dispatch, useEffectsErrorHandler }
+    ) => {
+      acc[propertyName] = { dispatch, useEffectsErrorHandler };
+      return acc;
+    },
+    {}
+  );
 }
 
 export function getSourceMetadata<T>(instance: T): EffectMetadata<T>[] {

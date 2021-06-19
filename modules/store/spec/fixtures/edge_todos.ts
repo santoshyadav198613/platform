@@ -13,12 +13,12 @@ const todo = (state: State | undefined, action: any) => {
         completed: false,
       };
     case 'TOGGLE_TODO':
-      if (state!.id !== action.id) {
+      if (state?.id !== action.id) {
         return state;
       }
 
       return Object.assign({}, state, {
-        completed: !state!.completed,
+        completed: !state?.completed,
       });
 
     default:
@@ -31,7 +31,7 @@ export const todos = (state = [], action: any) => {
     case 'ADD_TODO':
       return [...state, todo(undefined, action)];
     case 'TOGGLE_TODO':
-      return state.map(t => todo(t, action));
+      return state.map((t) => todo(t, action));
     default:
       return state;
   }

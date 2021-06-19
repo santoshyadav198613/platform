@@ -4,7 +4,7 @@
 
 ## Overview
 
-Generates a feature set containing an `actions`, `effects` and `reducer` file. You use this to build out a new feature area that provides a new piece of state.
+Generates a feature set containing an `actions`, `effects`, `reducer`, and `selectors` file. You use this to build out a new feature area that provides a new piece of state.
 
 ## Command
 
@@ -31,15 +31,15 @@ Use creator functions for actions, reducers, and effects.
 - `--creators`
   - Alias: `-c`
   - Type: `boolean`
-  - Default: `false`
+  - Default: `true`
 
-Nest the effects file within a folder based on the feature `name`.
+Nest the feature files within a folder based on the feature `name`.
 
 - `--flat`
   - Type: `boolean`
   - Default: `true`
 
-Group the `actions`, `effects` and `reducers` files within their respective folders.
+Group the feature files within their respective folders.
 
 - `--group`
   - Alias: `-g`
@@ -67,9 +67,9 @@ Specifies if api success and failure `actions`, `reducer`, and `effects` should 
 
 Generate spec files associated with the feature files.
 
-- `--spec`
+- `--skip-tests`
   - Type: `boolean`
-  - Default: `true`
+  - Default: `false`
 
 ## Examples
 
@@ -92,7 +92,7 @@ ng generate module User --flat false
 ng generate feature user/User -m user.module.ts --group
 ```
 
-Generate a `User` feature set with `actions`, `effects` and `reducers` file nested within their respective folders.
+Generate a `User` feature set with `actions`, `effects`, `reducer`, and `selectors` file nested within their respective folders.
 
 ```sh
 ng generate feature User --group

@@ -12,7 +12,7 @@ There are a few consistent parts of every piece of state managed by a reducer.
 
 - An interface or type that defines the shape of the state.
 - The arguments including the initial state or current state and the current action.
-- The switch statement
+- The functions that handle state changes for their associated action(s).
 
 Below is an example of a set of actions to handle the state of a scoreboard,
 and the associated reducer function.
@@ -20,14 +20,13 @@ and the associated reducer function.
 First, define some actions for interacting with a piece of state.
 
 <code-example header="scoreboard-page.actions.ts">
-import { createAction } from '@ngrx/store';
+import { createAction, props } from '@ngrx/store';
 
 export const homeScore = createAction('[Scoreboard Page] Home Score');
-export const awayScore createAction('[Scoreboard Page] Away Score');
-export const reset = createAction('[Scoreboard Page] Score Reset');
+export const awayScore = createAction('[Scoreboard Page] Away Score');
+export const resetScore = createAction('[Scoreboard Page] Score Reset');
+export const setScores = createAction('[Scoreboard Page] Set Scores', props<{game: Game}>());
 
-const all = union({ homeScore, awayScore, reset });
-export type ActionsUnion = typeof all;
 </code-example>
 
 Next, create a reducer file that imports the actions and define
@@ -38,6 +37,7 @@ a shape for the piece of state.
 Each reducer function is a listener of actions. The scoreboard actions defined above describe the possible transitions handled by the reducer. Import multiple sets of actions to handle additional state transitions within a reducer.
 
 <code-example header="scoreboard.reducer.ts">
+import { Action, createReducer, on } from '@ngrx/store';
 import * as ScoreboardPageActions from '../actions/scoreboard-page.actions';
 
 export interface State {
@@ -66,42 +66,30 @@ The initial values for the `home` and `away` properties of the state are 0.
 
 ### Creating the reducer function
 
-The reducer function's responsibility is to handle the state transitions in an immutable way. Define a reducer function that handles the actions for managing the state of the scoreboard.
+The reducer function's responsibility is to handle the state transitions in an immutable way. Create a reducer function that handles the actions for managing the state of the scoreboard using the `createReducer` function.
 
 <code-example header="scoreboard.reducer.ts">
-export function reducer(
-  state = initialState,
-  action: ScoreboardPageActions.ActionsUnion
-): State {
-  switch (action.type) {
-    case ScoreboardPageActions.homeScore.type: {
-      return {
-        ...state,
-        home: state.home + 1,
-      };
-    }
+const scoreboardReducer = createReducer(
+  initialState,
+  on(ScoreboardPageActions.homeScore, state => ({ ...state, home: state.home + 1 })),
+  on(ScoreboardPageActions.awayScore, state => ({ ...state, away: state.away + 1 })),
+  on(ScoreboardPageActions.resetScore, state => ({ home: 0, away: 0 })),
+  on(ScoreboardPageActions.setScores, (state, { game }) => ({ home: game.home, away: game.away }))
+);
 
-    case ScoreboardPageActions.awayScore.type: {
-      return {
-        ...state,
-        away: state.away + 1,
-      };
-    }
-
-    case ScoreboardPageActions.reset.type: {
-      return { home: action.home, away: action.away };
-    }
-
-    default: {
-      return state;
-    }
-  }
+export function reducer(state: State | undefined, action: Action) {
+  return scoreboardReducer(state, action);
 }
 </code-example>
 
-Reducers use switch statements in combination with TypeScript's discriminated unions defined in your actions to provide type-safe processing of actions in a reducer. Switch statements use type unions to determine the correct shape of the action being consumed in each case. The action types defined with your actions are reused in your reducer functions as case statements. The type union is also provided to your reducer function to constrain the available actions that are handled in that reducer function.
+<div class="alert is-important">
 
-In the example above, the reducer is handling 3 actions: `[Scoreboard Page] Home Score`, `[Scoreboard Page] Away Score`, and `[Scoreboard Page] Reset`. Each action is strongly-typed based on the provided `ActionsUnion`. Each action handles the state transition immutably. This means that the state transitions are not modifying the original state, but are returning a new state object using the spread operator. The spread syntax copies the properties from the current state into the object, creating a new reference. This ensures that a new state is produced with each change, preserving the purity of the change. This also promotes referential integrity, guaranteeing that the old reference was discarded when a state change occurred.
+**Note:** The exported `reducer` function is necessary as [function calls are not supported](https://angular.io/guide/aot-compiler#function-calls-are-not-supported) the View Engine AOT compiler. It is no longer required if you use the default Ivy AOT compiler (or JIT).
+
+</div>
+
+In the example above, the reducer is handling 4 actions: `[Scoreboard Page] Home Score`, `[Scoreboard Page] Away Score`, `[Scoreboard Page] Score Reset` and `[Scoreboard Page] Set Scores`. Each action is strongly-typed. Each action handles the state transition immutably. This means that the state transitions are not modifying the original state, but are returning a new state object using the spread operator. The spread syntax copies the properties from the current state into the object, creating a new reference. This ensures that a new state is produced with each change, preserving the purity of the change. This also promotes referential integrity, guaranteeing that the old reference was discarded when a state change occurred.
+
 
 <div class="alert is-important">
 
@@ -109,7 +97,13 @@ In the example above, the reducer is handling 3 actions: `[Scoreboard Page] Home
 
 </div>
 
-When an action is dispatched, _all registered reducers_ receive the action. Whether they handle the action is determined by the switch statement. For this reason, each switch statement _always_ includes a default case that returns the previous state when the reducer function doesn't need to handle the action.
+When an action is dispatched, _all registered reducers_ receive the action. Whether they handle the action is determined by the `on` functions that associate one or more actions with a given state change.
+
+<div class="alert is-important">
+
+**Note:** You can also write reducers using switch statements, which was the previously defined way before reducer creators were introduced in NgRx. If you are looking for examples of reducers using switch statements, visit the documentation for [versions 7.x and prior](https://v7.ngrx.io/guide/store/reducers).
+
+</div>
 
 ## Registering root state
 
@@ -118,11 +112,11 @@ The state of your application is defined as one large object. Registering reduce
 <code-example header="app.module.ts">
 import { NgModule } from '@angular/core';
 import { StoreModule } from '@ngrx/store';
-import { scoreboardReducer } from './reducers/scoreboard.reducer';
+import * as fromScoreboard from './reducers/scoreboard.reducer';
 
 @NgModule({
   imports: [
-    StoreModule.forRoot({ game: scoreboardReducer })
+    StoreModule.forRoot({ game: fromScoreboard.reducer })
   ],
 })
 export class AppModule {}
@@ -157,18 +151,28 @@ This registers your application with an empty object for the root state.
 
 Now use the `scoreboard` reducer with a feature `NgModule` named `ScoreboardModule` to register additional state.
 
+<code-example header="scoreboard.reducer.ts">
+export const scoreboardFeatureKey = 'game';
+</code-example>
+
 <code-example header="scoreboard.module.ts">
 import { NgModule } from '@angular/core';
 import { StoreModule } from '@ngrx/store';
-import { scoreboardReducer } from './reducers/scoreboard.reducer';
+import * as fromScoreboard from './reducers/scoreboard.reducer';
 
 @NgModule({
   imports: [
-    StoreModule.forFeature('game', scoreboardReducer)
+    StoreModule.forFeature(fromScoreboard.scoreboardFeatureKey, fromScoreboard.reducer)
   ],
 })
 export class ScoreboardModule {}
 </code-example>
+
+<div class="alert is-important">
+
+**Note:** It is recommended to abstract a feature key string to prevent hardcoding strings when registering feature state and calling `createFeatureSelector`.
+
+</div>
 
 Add the `ScoreboardModule` to the `AppModule` to load the state eagerly.
 

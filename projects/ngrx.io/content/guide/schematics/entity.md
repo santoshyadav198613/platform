@@ -31,7 +31,7 @@ Use creator functions for actions, reducers, and effects.
 - `--creators`
   - Alias: `-c`
   - Type: `boolean`
-  - Default: `false`
+  - Default: `true`
 
 Nest the effects file within a folder based on the entity `name`.
 
@@ -53,9 +53,9 @@ Provide the path to a `reducers` file containing a state interface and a object 
 
 Generate spec files associated with the entity files.
 
-- `--spec`
+- `--skip-tests`
   - Type: `boolean`
-  - Default: `true`
+  - Default: `false`
 
 ## Examples
 

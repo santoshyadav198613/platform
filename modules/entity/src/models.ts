@@ -1,7 +1,4 @@
-export type ComparerStr<T> = (a: T, b: T) => string;
-export type ComparerNum<T> = (a: T, b: T) => number;
-
-export type Comparer<T> = ComparerNum<T> | ComparerStr<T>;
+export type Comparer<T> = (a: T, b: T) => number;
 
 export type IdSelectorStr<T> = (model: T) => string;
 export type IdSelectorNum<T> = (model: T) => number;
@@ -32,6 +29,18 @@ export type Predicate<T> = (entity: T) => boolean;
 
 export type EntityMap<T> = (entity: T) => T;
 
+export interface EntityMapOneNum<T> {
+  id: number;
+  map: EntityMap<T>;
+}
+
+export interface EntityMapOneStr<T> {
+  id: string;
+  map: EntityMap<T>;
+}
+
+export type EntityMapOne<T> = EntityMapOneNum<T> | EntityMapOneStr<T>;
+
 export interface EntityState<T> {
   ids: string[] | number[];
   entities: Dictionary<T>;
@@ -45,7 +54,10 @@ export interface EntityDefinition<T> {
 export interface EntityStateAdapter<T> {
   addOne<S extends EntityState<T>>(entity: T, state: S): S;
   addMany<S extends EntityState<T>>(entities: T[], state: S): S;
-  addAll<S extends EntityState<T>>(entities: T[], state: S): S;
+
+  setAll<S extends EntityState<T>>(entities: T[], state: S): S;
+  setOne<S extends EntityState<T>>(entity: T, state: S): S;
+  setMany<S extends EntityState<T>>(entities: T[], state: S): S;
 
   removeOne<S extends EntityState<T>>(key: string, state: S): S;
   removeOne<S extends EntityState<T>>(key: number, state: S): S;
@@ -62,6 +74,7 @@ export interface EntityStateAdapter<T> {
   upsertOne<S extends EntityState<T>>(entity: T, state: S): S;
   upsertMany<S extends EntityState<T>>(entities: T[], state: S): S;
 
+  mapOne<S extends EntityState<T>>(map: EntityMapOne<T>, state: S): S;
   map<S extends EntityState<T>>(map: EntityMap<T>, state: S): S;
 }
 

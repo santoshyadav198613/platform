@@ -22,26 +22,26 @@ import {
 } from '../..';
 
 class Bar {
-  id: number;
-  bar: string;
+  id!: number;
+  bar!: string;
 }
 class Foo {
-  id: string;
-  foo: string;
+  id!: string;
+  foo!: string;
 }
 class Hero {
-  id: number;
-  name: string;
+  id!: number;
+  name!: string;
   power?: string;
 }
 class Villain {
-  key: string;
-  name: string;
+  key!: string;
+  name!: string;
 }
 
 const metadata: EntityMetadataMap = {
   Hero: {},
-  Villain: { selectId: villain => villain.key },
+  Villain: { selectId: (villain) => villain.key },
 };
 describe('EntityCollectionReducerRegistry', () => {
   let collectionCreator: EntityCollectionCreator;
@@ -52,7 +52,11 @@ describe('EntityCollectionReducerRegistry', () => {
 
   beforeEach(() => {
     entityActionFactory = new EntityActionFactory();
-    logger = jasmine.createSpyObj('Logger', ['error', 'log', 'warn']);
+    const logger = {
+      error: jasmine.createSpy('error'),
+      log: jasmine.createSpy('log'),
+      warn: jasmine.createSpy('warn'),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -73,12 +77,10 @@ describe('EntityCollectionReducerRegistry', () => {
 
   /** Sets the test variables with injected values. Closes TestBed configuration. */
   function setup() {
-    collectionCreator = TestBed.get(EntityCollectionCreator);
-    const entityCacheReducerFactory = TestBed.get(
-      EntityCacheReducerFactory
-    ) as EntityCacheReducerFactory;
+    collectionCreator = TestBed.inject(EntityCollectionCreator);
+    const entityCacheReducerFactory = TestBed.inject(EntityCacheReducerFactory);
     entityCacheReducer = entityCacheReducerFactory.create();
-    entityCollectionReducerRegistry = TestBed.get(
+    entityCollectionReducerRegistry = TestBed.inject(
       EntityCollectionReducerRegistry
     );
   }
@@ -96,7 +98,7 @@ describe('EntityCollectionReducerRegistry', () => {
       // Must initialize the state by hand
       const state = entityCacheReducer({}, action);
       const collection = state['Foo'];
-      expect(collection.ids.length).toBe(0, 'ADD_ONE should not add');
+      expect(collection.ids.length).toBe(0);
     });
 
     it('can replace existing reducer by registering with same name', () => {
@@ -112,7 +114,7 @@ describe('EntityCollectionReducerRegistry', () => {
       );
       const state = entityCacheReducer({}, action);
       const collection = state['Hero'];
-      expect(collection.ids.length).toBe(0, 'ADD_ONE should not add');
+      expect(collection.ids.length).toBe(0);
     });
   });
 
@@ -141,8 +143,8 @@ describe('EntityCollectionReducerRegistry', () => {
       let state = entityCacheReducer({}, fooAction);
       state = entityCacheReducer(state, barAction);
 
-      expect(state['Foo'].ids.length).toBe(0, 'ADD_ONE Foo should not add');
-      expect(state['Bar'].ids.length).toBe(0, 'ADD_ONE Bar should not add');
+      expect(state['Foo'].ids.length).toBe(0);
+      expect(state['Bar'].ids.length).toBe(0);
     });
 
     it('can register several reducers that may override.', () => {
@@ -167,8 +169,8 @@ describe('EntityCollectionReducerRegistry', () => {
       let state = entityCacheReducer({}, fooAction);
       state = entityCacheReducer(state, heroAction);
 
-      expect(state['Foo'].ids.length).toBe(0, 'ADD_ONE Foo should not add');
-      expect(state['Hero'].ids.length).toBe(0, 'ADD_ONE Hero should not add');
+      expect(state['Foo'].ids.length).toBe(0);
+      expect(state['Hero'].ids.length).toBe(0);
     });
   });
 
@@ -239,8 +241,8 @@ describe('EntityCollectionReducerRegistry', () => {
 
       // inner default reducer worked as expected
       const collection = state['Hero'];
-      expect(collection.ids.length).toBe(1, 'should have added one');
-      expect(collection.entities[42]).toEqual(hero, 'should be added hero');
+      expect(collection.ids.length).toBe(1);
+      expect(collection.entities[42]).toEqual(hero);
     });
 
     it('should call meta reducers for inner default reducer as expected', () => {
@@ -308,20 +310,17 @@ describe('EntityCollectionReducerRegistry', () => {
   ) {
     return {
       ...collectionCreator.create<T>(entityName),
-      ids: data.map(e => selectId(e)) as string[] | number[],
-      entities: data.reduce(
-        (acc, e) => {
-          acc[selectId(e)] = e;
-          return acc;
-        },
-        {} as any
-      ),
+      ids: data.map((e) => selectId(e)) as string[] | number[],
+      entities: data.reduce((acc, e) => {
+        acc[selectId(e)] = e;
+        return acc;
+      }, {} as any),
     } as EntityCollection<T>;
   }
 
   function createInitialCache(entityMap: { [entityName: string]: any[] }) {
     const cache: EntityCache = {};
-    // tslint:disable-next-line:forin
+    // eslint-disable-next-line guard-for-in
     for (const entityName in entityMap) {
       const selectId =
         metadata[entityName].selectId || ((entity: any) => entity.id);

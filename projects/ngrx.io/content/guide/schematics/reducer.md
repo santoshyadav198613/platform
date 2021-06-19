@@ -32,7 +32,7 @@ Use creator functions to generate the actions and reducer.
 - `--creators`
   - Alias: `-c`
   - Type: `boolean`
-  - Default: `false`
+  - Default: `true`
 
 Nest the reducer file within a folder based on the reducer `name`.
 
@@ -68,9 +68,9 @@ Specifies if api success and failure actions should be added to the reducer.
 
 Generate a spec file alongside the reducer file.
 
-- `--spec`
+- `--skip-tests`
   - Type: `boolean`
-  - Default: `true`
+  - Default: `false`
 
 ## Examples
 

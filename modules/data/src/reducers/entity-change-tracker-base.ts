@@ -1,19 +1,7 @@
-import {
-  EntityAdapter,
-  EntityState,
-  Dictionary,
-  IdSelector,
-  Update,
-} from '@ngrx/entity';
+import { EntityAdapter, IdSelector, Update } from '@ngrx/entity';
 
-import {
-  ChangeState,
-  ChangeStateMap,
-  ChangeType,
-  EntityCollection,
-} from './entity-collection';
+import { ChangeType, EntityCollection } from './entity-collection';
 import { defaultSelectId } from '../utils/utilities';
-import { EntityAction, EntityActionOptions } from '../actions/entity-action';
 import { EntityChangeTracker } from './entity-change-tracker';
 import { MergeStrategy } from '../actions/merge-strategy';
 import { UpdateResponseData } from '../actions/update-response-data';
@@ -266,11 +254,11 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
     function filterChanged(responseData: UpdateResponseData<T>[]): Update<T>[] {
       if (skipUnchanged === true) {
         // keep only those updates that the server changed (knowable if is UpdateResponseData<T>)
-        responseData = responseData.filter(r => r.changed === true);
+        responseData = responseData.filter((r) => r.changed === true);
       }
       // Strip unchanged property from responseData, leaving just the pure Update<T>
       // TODO: Remove? probably not necessary as the Update isn't stored and adapter will ignore `changed`.
-      return responseData.map(r => ({ id: r.id as any, changes: r.changes }));
+      return responseData.map((r) => ({ id: r.id as any, changes: r.changes }));
     }
   }
 
@@ -349,10 +337,15 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
           const change = chgState[id];
           if (change) {
             if (!didMutate) {
-              chgState = { ...chgState };
+              chgState = {
+                ...chgState,
+                [id]: {
+                  ...chgState[id]!,
+                  originalValue: entity,
+                },
+              };
               didMutate = true;
             }
-            change.originalValue = entity;
           } else {
             upsertEntities.push(entity);
           }
@@ -699,6 +692,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
             didMutate = true;
           }
           delete chgState[id]; // clear tracking of this entity
+          acc.changeState = chgState;
           switch (change.changeType) {
             case ChangeType.Added:
               acc.remove.push(id);
@@ -726,7 +720,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
 
     collection = this.adapter.removeMany(remove as string[], collection);
     collection = this.adapter.upsertMany(upsert, collection);
-    return didMutate ? collection : { ...collection, changeState };
+    return didMutate ? { ...collection, changeState } : collection;
   }
 
   /**

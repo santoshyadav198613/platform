@@ -57,21 +57,15 @@ describe(`Store utils`, () => {
 
   describe(`compose()`, () => {
     const cube = (n: number) => Math.pow(n, 3);
-    const precision = (n: number) => parseFloat(n.toPrecision(12));
-    const addPtTwo = (n: number) => n + 0.2;
+    const multiplyByFive = (n: number) => n * 5;
+    const addTwo = (n: number) => n + 2;
 
     it(`should compose functions`, () => {
-      const addPrecision = compose(
-        precision,
-        addPtTwo
-      );
-      const addPrecisionCubed = compose(
-        cube,
-        addPrecision
-      );
+      const add2AndMultiply5 = compose(multiplyByFive, addTwo);
+      const add2AndMultiply5Cubed = compose(cube, add2AndMultiply5);
 
-      expect(addPrecision(0.1)).toBe(0.3);
-      expect(addPrecisionCubed(0.1)).toBe(0.027);
+      expect(add2AndMultiply5(1)).toBe(15);
+      expect(add2AndMultiply5Cubed(2)).toBe(8000);
     });
 
     it(`should act as identity if no functions passed`, () => {
@@ -84,7 +78,7 @@ describe(`Store utils`, () => {
     it('should compose a reducer factory from the provided meta reducers', () => {
       const metaReducer = jasmine
         .createSpy('metaReducer')
-        .and.callFake(red => (s: any, a: any) => red(s, a));
+        .and.callFake((red) => (s: any, a: any) => red(s, a));
       const reducer = (state: any, action: any) => state;
 
       const featureReducerFactory = createFeatureReducerFactory([metaReducer]);

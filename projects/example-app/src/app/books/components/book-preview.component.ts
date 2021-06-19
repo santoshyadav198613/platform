@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
-import { Book } from '@example-app/books/models/book';
+
+import { Book } from '@example-app/books/models';
 
 @Component({
   selector: 'bc-book-preview',
@@ -7,9 +8,11 @@ import { Book } from '@example-app/books/models/book';
     <a [routerLink]="['/books', id]">
       <mat-card>
         <mat-card-title-group>
-          <img mat-card-sm-image *ngIf="thumbnail" [src]="thumbnail"/>
-          <mat-card-title>{{ title | bcEllipsis:35 }}</mat-card-title>
-          <mat-card-subtitle *ngIf="subtitle">{{ subtitle | bcEllipsis:40 }}</mat-card-subtitle>
+          <img mat-card-sm-image *ngIf="thumbnail" [src]="thumbnail" />
+          <mat-card-title>{{ title | bcEllipsis: 35 }}</mat-card-title>
+          <mat-card-subtitle *ngIf="subtitle">{{
+            subtitle | bcEllipsis: 40
+          }}</mat-card-subtitle>
         </mat-card-title-group>
         <mat-card-content>
           <p *ngIf="description">{{ description | bcEllipsis }}</p>
@@ -76,7 +79,7 @@ import { Book } from '@example-app/books/models/book';
   ],
 })
 export class BookPreviewComponent {
-  @Input() book: Book;
+  @Input() book!: Book;
 
   get id() {
     return this.book.id;

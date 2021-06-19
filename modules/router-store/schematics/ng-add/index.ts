@@ -13,14 +13,12 @@ import {
   InsertChange,
   addImportToModule,
   addPackageToPackageJson,
-  buildRelativePath,
   findModuleFromOptions,
   getProjectPath,
   insertImport,
   parseName,
   platformVersion,
-  stringUtils,
-} from '@ngrx/router-store/schematics-core';
+} from '../../schematics-core';
 import { Schema as RouterStoreOptions } from './schema';
 
 function addImportToNgModule(options: RouterStoreOptions): Rule {
@@ -90,7 +88,7 @@ function addNgRxRouterStoreToPackageJson() {
   };
 }
 
-export default function(options: RouterStoreOptions): Rule {
+export default function (options: RouterStoreOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     options.path = getProjectPath(host, options);
 

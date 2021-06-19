@@ -10,7 +10,7 @@ import {
   createAppModuleWithEffects,
   defaultWorkspaceOptions,
   defaultAppOptions,
-} from '../../../schematics-core/testing';
+} from '@ngrx/schematics-core/testing';
 
 describe('Effect Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
@@ -21,7 +21,6 @@ describe('Effect Schematic', () => {
   const defaultOptions: EffectOptions = {
     name: 'foo',
     project: 'bar',
-    spec: true,
     module: undefined,
     flat: false,
     feature: false,
@@ -34,11 +33,11 @@ describe('Effect Schematic', () => {
 
   let appTree: UnitTestTree;
 
-  beforeEach(() => {
-    appTree = createWorkspace(schematicRunner, appTree);
+  beforeEach(async () => {
+    appTree = await createWorkspace(schematicRunner, appTree);
   });
 
-  it('should create an effect to specified project if provided', () => {
+  it('should create an effect to specified project if provided', async () => {
     const options = {
       ...defaultOptions,
       project: 'baz',
@@ -49,7 +48,9 @@ describe('Effect Schematic', () => {
       name: 'baz',
     });
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${specifiedProjectPath}/src/lib/foo/foo.effects.spec.ts`)
@@ -59,10 +60,12 @@ describe('Effect Schematic', () => {
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should create an effect with a spec file', () => {
+  it('should create an effect with a spec file', async () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${projectPath}/src/app/foo/foo.effects.spec.ts`)
@@ -72,42 +75,48 @@ describe('Effect Schematic', () => {
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should not be provided by default', () => {
+  it('should not be provided by default', async () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).not.toMatch(
       /import { FooEffects } from '.\/foo\/foo.effects'/
     );
   });
 
-  it('should import into a specified module', () => {
+  it('should import into a specified module', async () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(/import { FooEffects } from '.\/foo\/foo.effects'/);
   });
 
-  it('should fail if specified module does not exist', () => {
+  it('should fail if specified module does not exist', async () => {
     const options = {
       ...defaultOptions,
       module: `${projectPath}/src/app/app.moduleXXX.ts`,
     };
     let thrownError: Error | null = null;
     try {
-      schematicRunner.runSchematic('effects', options, appTree);
+      await schematicRunner.runSchematicAsync('effects', options, appTree);
     } catch (err) {
       thrownError = err;
     }
     expect(thrownError).toBeDefined();
   });
 
-  it('should respect the spec flag', () => {
-    const options = { ...defaultOptions, spec: false };
+  it('should respect the skipTests flag', async () => {
+    const options = { ...defaultOptions, skipTests: true };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${projectPath}/src/app/foo/foo.effects.ts`)
@@ -117,25 +126,66 @@ describe('Effect Schematic', () => {
     ).toEqual(-1);
   });
 
-  it('should register the root effect in the provided module', () => {
+  it('should register the root effect in the provided module', async () => {
     const options = { ...defaultOptions, root: true, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
 
     expect(content).toMatch(/EffectsModule\.forRoot\(\[FooEffects\]\)/);
   });
 
-  it('should register the feature effect in the provided module', () => {
+  it('should register the root effect module without effect with the minimal flag', async () => {
+    const options = {
+      ...defaultOptions,
+      root: true,
+      name: undefined,
+      module: 'app.module.ts',
+      minimal: true,
+    };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+
+    expect(content).toMatch(/EffectsModule\.forRoot\(\[\]\)/);
+    expect(content).not.toMatch(/FooEffects/);
+  });
+
+  it('should still register the feature effect module with an effect with the minimal flag', async () => {
+    const options = {
+      ...defaultOptions,
+      root: false,
+      module: 'app.module.ts',
+      minimal: true,
+    };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+
+    expect(content).toMatch(/EffectsModule\.forFeature\(\[FooEffects\]\)/);
+    expect(
+      tree.files.indexOf(`${projectPath}/src/app/foo/foo.effects.ts`)
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should register the feature effect in the provided module', async () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
 
     expect(content).toMatch(/EffectsModule\.forFeature\(\[FooEffects\]\)/);
   });
 
-  it('should add an effect to the empty array of registered effects', () => {
+  it('should add an effect to the empty array of registered effects', async () => {
     const storeModule = `${projectPath}/src/app/store.module.ts`;
     const options = {
       ...defaultOptions,
@@ -148,13 +198,15 @@ describe('Effect Schematic', () => {
       'EffectsModule.forRoot([])'
     );
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(storeModule);
 
     expect(content).toMatch(/EffectsModule\.forRoot\(\[FooEffects\]\)/);
   });
 
-  it('should add an effect to the existing registered root effects', () => {
+  it('should add an effect to the existing registered root effects', async () => {
     const storeModule = `${projectPath}/src/app/store.module.ts`;
     const options = {
       ...defaultOptions,
@@ -167,7 +219,9 @@ describe('Effect Schematic', () => {
       'EffectsModule.forRoot([UserEffects])'
     );
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(storeModule);
 
     expect(content).toMatch(
@@ -175,7 +229,7 @@ describe('Effect Schematic', () => {
     );
   });
 
-  it('should add an effect to the existing registered feature effects', () => {
+  it('should add an effect to the existing registered feature effects', async () => {
     const storeModule = `${projectPath}/src/app/store.module.ts`;
     const options = { ...defaultOptions, module: 'store.module.ts' };
     appTree = createAppModuleWithEffects(
@@ -184,7 +238,9 @@ describe('Effect Schematic', () => {
       `EffectsModule.forRoot([RootEffects])\n    EffectsModule.forFeature([UserEffects])`
     );
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(storeModule);
 
     expect(content).toMatch(
@@ -192,7 +248,7 @@ describe('Effect Schematic', () => {
     );
   });
 
-  it('should not add an effect to registered effects defined with a variable', () => {
+  it('should not add an effect to registered effects defined with a variable', async () => {
     const storeModule = `${projectPath}/src/app/store.module.ts`;
     const options = { ...defaultOptions, module: 'store.module.ts' };
     appTree = createAppModuleWithEffects(
@@ -201,32 +257,43 @@ describe('Effect Schematic', () => {
       'EffectsModule.forRoot(effects)'
     );
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(storeModule);
 
     expect(content).not.toMatch(/EffectsModule\.forRoot\(\[FooEffects\]\)/);
   });
 
-  it('should group within an "effects" folder if group is set', () => {
-    const options = { ...defaultOptions, flat: true, spec: false, group: true };
+  it('should group within an "effects" folder if group is set', async () => {
+    const options = {
+      ...defaultOptions,
+      flat: true,
+      skipTests: true,
+      group: true,
+    };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${projectPath}/src/app/effects/foo.effects.ts`)
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should group and nest the effect within a feature', () => {
+  it('should group and nest the effect within a feature', async () => {
     const options = {
       ...defaultOptions,
-      spec: false,
+      skipTests: true,
       group: true,
       flat: false,
       feature: true,
     };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${projectPath}/src/app/effects/foo/foo.effects.ts`)
@@ -237,14 +304,16 @@ describe('Effect Schematic', () => {
     );
 
     expect(content).toMatch(
-      /import \{ FooActionTypes, FooActions } from \'\.\.\/\.\.\/actions\/foo\/foo\.actions';/
+      /import \{ FooActionTypes, FooActions } from '\.\.\/\.\.\/actions\/foo\/foo\.actions';/
     );
   });
 
-  it('should create an effect that describes a source of actions within a feature', () => {
+  it('should create an effect that describes a source of actions within a feature', async () => {
     const options = { ...defaultOptions, feature: true };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/foo/foo.effects.ts`
     );
@@ -252,24 +321,28 @@ describe('Effect Schematic', () => {
       /import { Actions, Effect, ofType } from '@ngrx\/effects';/
     );
     expect(content).toMatch(/import { concatMap } from 'rxjs\/operators';/);
-    expect(content).toMatch(/import { EMPTY } from 'rxjs';/);
+    expect(content).toMatch(/import { Observable, EMPTY } from 'rxjs';/);
     expect(content).toMatch(
       /import { FooActionTypes, FooActions } from '\.\/foo.actions';/
     );
     expect(content).toMatch(/export class FooEffects/);
     expect(content).toMatch(/loadFoos\$ = this\.actions\$.pipe\(/);
     expect(content).toMatch(/ofType\(FooActionTypes\.LoadFoos\)/);
-    expect(content).toMatch(/concatMap\(\(\) => EMPTY\)/);
+    expect(content).toMatch(
+      /concatMap\(\(\) => EMPTY as Observable<\{ type: string \}>\)/
+    );
 
     expect(content).toMatch(
       /constructor\(private actions\$: Actions<FooActions>\) {}/
     );
   });
 
-  it('should create an effect that does not define a source of actions within the root', () => {
+  it('should create an effect that does not define a source of actions within the root', async () => {
     const options = { ...defaultOptions, root: true };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/foo/foo.effects.ts`
     );
@@ -285,10 +358,12 @@ describe('Effect Schematic', () => {
     );
   });
 
-  it('should create an api effect that describes a source of actions within a feature', () => {
+  it('should create an api effect that describes a source of actions within a feature', async () => {
     const options = { ...defaultOptions, feature: true, api: true };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/foo/foo.effects.ts`
     );
@@ -298,7 +373,7 @@ describe('Effect Schematic', () => {
     expect(content).toMatch(
       /import { catchError, map, concatMap } from 'rxjs\/operators';/
     );
-    expect(content).toMatch(/import { EMPTY, of } from 'rxjs';/);
+    expect(content).toMatch(/import { Observable, EMPTY, of } from 'rxjs';/);
     expect(content).toMatch(
       /import { LoadFoosFailure, LoadFoosSuccess, FooActionTypes, FooActions } from '\.\/foo.actions';/
     );
@@ -318,10 +393,12 @@ describe('Effect Schematic', () => {
     );
   });
 
-  it('should create an effect using creator function', () => {
+  it('should create an effect using creator function', async () => {
     const options = { ...defaultOptions, creators: true, feature: true };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/foo/foo.effects.ts`
     );
@@ -330,14 +407,16 @@ describe('Effect Schematic', () => {
     );
     expect(content).not.toMatch(/@Effect\(\)/);
     expect(content).toMatch(
-      /loadFoos\$ = createEffect\(\(\) => this.actions\$.pipe\(/
+      /loadFoos\$ = createEffect\(\(\) => {\s* return this.actions\$.pipe\(/
     );
   });
 
-  it('should use action creators when creators is enabled in a feature', () => {
+  it('should use action creators when creators is enabled in a feature', async () => {
     const options = { ...defaultOptions, creators: true, feature: true };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/foo/foo.effects.ts`
     );
@@ -349,7 +428,7 @@ describe('Effect Schematic', () => {
     expect(content).toMatch(/ofType\(FooActions\.loadFoos\),/);
   });
 
-  it('should create an api effect using creator function', () => {
+  it('should create an api effect using creator function', async () => {
     const options = {
       ...defaultOptions,
       creators: true,
@@ -357,7 +436,9 @@ describe('Effect Schematic', () => {
       feature: true,
     };
 
-    const tree = schematicRunner.runSchematic('effect', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/foo/foo.effects.ts`
     );
@@ -367,7 +448,19 @@ describe('Effect Schematic', () => {
     );
     expect(content).not.toMatch(/@Effect\(\)/);
     expect(content).toMatch(
-      /loadFoos\$ = createEffect\(\(\) => this.actions\$.pipe\(/
+      /loadFoos\$ = createEffect\(\(\) => {\s* return this.actions\$.pipe\(/
     );
+  });
+
+  it('should inject the effect service correctly', async () => {
+    const options = { ...defaultOptions };
+    const tree = await schematicRunner
+      .runSchematicAsync('effect', options, appTree)
+      .toPromise();
+    const content = tree.readContent(
+      `${projectPath}/src/app/foo/foo.effects.spec.ts`
+    );
+
+    expect(content).toMatch(/effects = TestBed\.inject\(FooEffects\);/);
   });
 });

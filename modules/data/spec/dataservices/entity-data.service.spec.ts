@@ -1,4 +1,4 @@
-import { NgModule, Optional } from '@angular/core';
+import { Injectable, NgModule, Optional } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 
@@ -7,11 +7,6 @@ import { Observable } from 'rxjs';
 import { Update } from '@ngrx/entity';
 
 import {
-  createEntityDefinition,
-  EntityDefinition,
-  EntityMetadata,
-  EntityMetadataMap,
-  ENTITY_METADATA_TOKEN,
   DefaultDataService,
   DefaultDataServiceFactory,
   HttpUrlGenerator,
@@ -32,10 +27,11 @@ export class CustomDataService {
 }
 
 export class Bazinga {
-  id: number;
-  wow: string;
+  id!: number;
+  wow!: string;
 }
 
+@Injectable()
 export class BazingaDataService
   implements EntityCollectionDataService<Bazinga> {
   name: string;
@@ -122,7 +118,7 @@ describe('EntityDataService', () => {
         { provide: HttpUrlGenerator, useClass: TestHttpUrlGenerator },
       ],
     });
-    entityDataService = TestBed.get(EntityDataService);
+    entityDataService = TestBed.inject(EntityDataService);
   });
 
   describe('#getService', () => {
@@ -161,11 +157,11 @@ describe('EntityDataService', () => {
       });
 
       let service = entityDataService.getService('Hero');
-      expect(service).toBe(customHeroService, 'custom Hero data service');
+      expect(service).toBe(customHeroService);
       expect(service.name).toBe('Hero CustomDataService');
 
       service = entityDataService.getService('Villain');
-      expect(service).toBe(customVillainService, 'custom Villain data service');
+      expect(service).toBe(customVillainService);
 
       // Other services are still DefaultDataServices
       service = entityDataService.getService('Foo');

@@ -1,20 +1,18 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "SchematicsNgRxData",
+  "$id": "SchematicsNgRxData",
   "title": "NgRx Data Schema",
   "type": "object",
   "properties": {
     "effect": {
       "type": "boolean",
       "default": true,
-      "description":
-        "When false use the EntityDataModuleWithoutEffects module instead of EntityDataModule."
+      "description": "When false use the EntityDataModuleWithoutEffects module instead of EntityDataModule."
     },
     "skipPackageJson": {
       "type": "boolean",
       "default": false,
-      "description":
-        "Do not add @ngrx/data as dependency to package.json (e.g., --skipPackageJson)."
+      "description": "Do not add @ngrx/data as dependency to package.json (e.g., --skipPackageJson)."
     },
     "path": {
       "type": "string",
@@ -37,8 +35,13 @@
     "migrateNgrxData": {
       "type": "boolean",
       "default": false,
-      "description": "Migrate from angular-ngrx-data, will rename modules.",
+      "description": "Migrate from ngrx-data, will rename modules.",
       "alias": "migrate"
+    },
+    "entityConfig": {
+      "type": "boolean",
+      "default": true,
+      "description": "Create the Entity config file"
     }
   },
   "required": []

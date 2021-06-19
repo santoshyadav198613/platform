@@ -4,18 +4,26 @@
     "sourceMap": true,
     "declaration": false,
     "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "strictPropertyInitialization": false,
+    "downlevelIteration": true,
+    "emitDecoratorMetadata": true,
     "noStrictGenericChecks": true,
     "lib": ["es2016", "dom"],
     "outDir": "../out-tsc/app",
     "target": "es5",
     "module": "commonjs",
-    "baseUrl": "",
-    "rootDir": "./",
+    "baseUrl": ".",
+    "rootDir": ".",
     "strict": true,
     "paths": {
+      "@ngrx/component": ["./modules/component"],
+      "@ngrx/component/schematics-core": [
+        "./modules/component/schematics-core"
+      ],
+      "@ngrx/component-store": ["./modules/component-store"],
+      "@ngrx/component-store/schematics-core": [
+        "./modules/component-store/schematics-core"
+      ],
       "@ngrx/data": ["./modules/data"],
       "@ngrx/data/schematics-core": ["./modules/data/schematics-core"],
       "@ngrx/effects": ["./modules/effects"],
@@ -38,8 +46,10 @@
       "@ngrx/schematics/schematics-core": [
         "./modules/schematics/schematics-core"
       ],
+      "@ngrx/schematics-core/*": ["./modules/schematics-core/*"],
       "@example-app/*": ["./projects/example-app/src/app/*"]
-    }
+    },
+    "typeRoots": ["node_modules/@types"]
   },
   "exclude": [
     "bazel-out",

@@ -6,7 +6,7 @@ import {
   ViewBookPageActions,
   CollectionApiActions,
 } from '@example-app/books/actions';
-import { Book, generateMockBook } from '@example-app/books/models/book';
+import { Book, generateMockBook } from '@example-app/books/models';
 
 describe('BooksReducer', () => {
   const book1 = generateMockBook();
@@ -130,9 +130,9 @@ describe('BooksReducer', () => {
   });
 
   describe('Selectors', () => {
-    describe('getSelectedId', () => {
+    describe('selectId', () => {
       it('should return the selected id', () => {
-        const result = fromBooks.getSelectedId({
+        const result = fromBooks.selectId({
           ...initialState,
           selectedBookId: book1.id,
         });

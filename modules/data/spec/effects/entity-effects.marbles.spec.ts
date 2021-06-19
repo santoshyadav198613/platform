@@ -2,7 +2,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { cold, hot, getTestScheduler } from 'jasmine-marbles';
-import { Observable, of, Subject } from 'rxjs';
+import { Observable } from 'rxjs';
 
 import { Actions } from '@ngrx/effects';
 import { Update } from '@ngrx/entity';
@@ -32,7 +32,11 @@ describe('EntityEffects (marble testing)', () => {
   let logger: Logger;
 
   beforeEach(() => {
-    logger = jasmine.createSpyObj('Logger', ['error', 'log', 'warn']);
+    logger = {
+      error: jasmine.createSpy('error'),
+      log: jasmine.createSpy('log'),
+      warn: jasmine.createSpy('warn'),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -41,7 +45,7 @@ describe('EntityEffects (marble testing)', () => {
         EntityActionFactory,
         // See https://github.com/ReactiveX/rxjs/blob/master/doc/marble-testing.md
         { provide: ENTITY_EFFECTS_SCHEDULER, useFactory: getTestScheduler },
-        /* tslint:disable-next-line:no-use-before-declare */
+        /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
         { provide: EntityDataService, useClass: TestDataService },
         { provide: Logger, useValue: logger },
         {
@@ -50,10 +54,10 @@ describe('EntityEffects (marble testing)', () => {
         },
       ],
     });
-    actions = TestBed.get(Actions);
-    dataService = TestBed.get(EntityDataService);
-    entityActionFactory = TestBed.get(EntityActionFactory);
-    effects = TestBed.get(EntityEffects);
+    actions = TestBed.inject(Actions);
+    dataService = TestBed.inject<unknown>(EntityDataService) as TestDataService;
+    entityActionFactory = TestBed.inject(EntityActionFactory);
+    effects = TestBed.inject(EntityEffects);
   });
 
   it('should return a QUERY_ALL_SUCCESS with the heroes on success', () => {
@@ -451,8 +455,8 @@ describe('EntityEffects (marble testing)', () => {
 
 // #region test helpers
 export class Hero {
-  id: number;
-  name: string;
+  id!: number;
+  name!: string;
 }
 
 /** make error produced by the EntityDataService */

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "SchematicsNgRxEntity",
+  "$id": "SchematicsNgRxEntity",
   "title": "NgRx Entity Options Schema",
   "type": "object",
   "properties": {
@@ -10,7 +10,8 @@
       "$default": {
         "$source": "argv",
         "index": 0
-      }
+      },
+      "x-prompt": "What should be the name of the entity?"
     },
     "path": {
       "type": "string",
@@ -23,10 +24,10 @@
       "description": "The name of the project.",
       "aliases": ["p"]
     },
-    "spec": {
+    "skipTests": {
       "type": "boolean",
-      "description": "Specifies if a spec file is generated.",
-      "default": true
+      "description": "When true, does not create test files.",
+      "default": false
     },
     "reducers": {
       "type": "string",
@@ -46,16 +47,15 @@
     "group": {
       "type": "boolean",
       "default": false,
-      "description":
-        "Group actions, reducers and effects within relative subfolders",
+      "description": "Group actions, reducers and effects within relative subfolders",
       "aliases": ["g"]
     },
     "creators": {
       "type": "boolean",
-      "default": false,
-      "description":
-        "Specifies whether to use creator functions for handling actions and reducers.",
-      "aliases": ["c"]
+      "default": true,
+      "description": "Specifies whether to use creator functions for handling actions and reducers.",
+      "aliases": ["c"],
+      "x-prompt": "Do you want to use the create function?"
     }
   },
   "required": []

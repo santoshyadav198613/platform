@@ -2,10 +2,8 @@ import { Inject, Injectable, Optional } from '@angular/core';
 
 // Prod build requires `MemoizedSelector even though not used.
 import { MemoizedSelector } from '@ngrx/store';
-import { createFeatureSelector, createSelector, Selector } from '@ngrx/store';
+import { createSelector, Selector } from '@ngrx/store';
 import { Dictionary } from '@ngrx/entity';
-
-import { Observable } from 'rxjs';
 
 import { EntityCache } from '../reducers/entity-cache';
 import {
@@ -19,7 +17,6 @@ import {
   ChangeStateMap,
 } from '../reducers/entity-collection';
 import { EntityCollectionCreator } from '../reducers/entity-collection-creator';
-import { EntityFilterFn } from '../entity-metadata/entity-filters';
 import { EntityMetadata } from '../entity-metadata/entity-metadata';
 
 /**
@@ -142,7 +139,7 @@ export class EntitySelectorsFactory {
 
   // Based on @ngrx/entity/state_selectors.ts
 
-  // tslint:disable:unified-signatures
+  /* eslint-disable @typescript-eslint/unified-signatures */
   // createCollectionSelectors(metadata) overload
   /**
    * Creates entity collection selectors from metadata.
@@ -154,7 +151,7 @@ export class EntitySelectorsFactory {
     S extends CollectionSelectors<T> = CollectionSelectors<T>
   >(metadata: EntityMetadata<T>): S;
 
-  // tslint:disable:unified-signatures
+  /* eslint-disable @typescript-eslint/unified-signatures */
   // createCollectionSelectors(entityName) overload
   /**
    * Creates default entity collection selectors for an entity type.
@@ -178,16 +175,19 @@ export class EntitySelectorsFactory {
     const selectKeys = (c: EntityCollection<T>) => c.ids;
     const selectEntityMap = (c: EntityCollection<T>) => c.entities;
 
-    const selectEntities: Selector<EntityCollection<T>, T[]> = createSelector(
+    const selectEntities: Selector<
+      EntityCollection<T>,
+      T[]
+    > = createSelector(
       selectKeys,
       selectEntityMap,
       (keys: (number | string)[], entities: Dictionary<T>): T[] =>
-        keys.map(key => entities[key] as T)
+        keys.map((key) => entities[key] as T)
     );
 
     const selectCount: Selector<EntityCollection<T>, number> = createSelector(
       selectKeys,
-      keys => keys.length
+      (keys) => keys.length
     );
 
     // EntityCollection selectors that go beyond the ngrx/entity/EntityState selectors
@@ -212,7 +212,7 @@ export class EntitySelectorsFactory {
     const extraSelectors: {
       [name: string]: Selector<EntityCollection<T>, any>;
     } = {};
-    Object.keys(extra).forEach(k => {
+    Object.keys(extra).forEach((k) => {
       extraSelectors['select' + k[0].toUpperCase() + k.slice(1)] = (
         c: EntityCollection<T>
       ) => (<any>c)[k];
@@ -263,7 +263,7 @@ export class EntitySelectorsFactory {
    * through the collection, to the collection members.
    */
   create<T, S extends EntitySelectors<T> = EntitySelectors<T>>(
-    // tslint:disable-next-line:unified-signatures
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
     entityName: string
   ): S;
 
@@ -285,7 +285,7 @@ export class EntitySelectorsFactory {
     const entitySelectors: {
       [name: string]: Selector<EntityCollection<T>, any>;
     } = {};
-    Object.keys(collectionSelectors).forEach(k => {
+    Object.keys(collectionSelectors).forEach((k) => {
       entitySelectors[k] = createSelector(
         selectCollection,
         collectionSelectors[k]

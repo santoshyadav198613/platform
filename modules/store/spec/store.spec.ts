@@ -9,7 +9,6 @@ import {
   select,
   ReducerManagerDispatcher,
   UPDATE,
-  REDUCER_FACTORY,
   ActionReducer,
   Action,
 } from '../';
@@ -23,10 +22,7 @@ import {
   counterReducer2,
 } from './fixtures/counter';
 import Spy = jasmine.Spy;
-import any = jasmine.any;
-import { skip, take } from 'rxjs/operators';
-import { MockStore, provideMockStore } from '../testing';
-import { createSelector } from '../src/selector';
+import { take } from 'rxjs/operators';
 
 interface TestAppSchema {
   counter1: number;
@@ -53,8 +49,8 @@ describe('ngRx Store', () => {
       imports: [StoreModule.forRoot(reducers, { initialState, metaReducers })],
     });
 
-    store = TestBed.get(Store);
-    dispatcher = TestBed.get(ActionsSubject);
+    store = TestBed.inject(Store);
+    dispatcher = TestBed.inject(ActionsSubject);
   }
 
   describe('initial state', () => {
@@ -68,7 +64,7 @@ describe('ngRx Store', () => {
       testStoreValue({ counter1: 0, counter2: 5, counter3: 0 }, done);
     });
 
-    it('should keep initial state values when state is partially initialized', (done: DoneFn) => {
+    it('should keep initial state values when state is partially initialized', (done: any) => {
       TestBed.configureTestingModule({
         imports: [
           StoreModule.forRoot({} as any, {
@@ -139,8 +135,8 @@ describe('ngRx Store', () => {
     });
 
     function testInitialState(feature?: string) {
-      store = TestBed.get(Store);
-      dispatcher = TestBed.get(ActionsSubject);
+      store = TestBed.inject(Store);
+      dispatcher = TestBed.inject(ActionsSubject);
 
       const actionSequence = '--a--b--c--d--e--f--g';
       const stateSequence = 'i-w-----x-----y--z---';
@@ -154,7 +150,7 @@ describe('ngRx Store', () => {
         g: { type: 'OTHER' },
       };
       const counterSteps = hot(actionSequence, actionValues);
-      counterSteps.subscribe(action => store.dispatch(action));
+      counterSteps.subscribe((action) => store.dispatch(action));
 
       const counterStateWithString = feature
         ? (store as any).select(feature, 'counter1')
@@ -167,8 +163,8 @@ describe('ngRx Store', () => {
       );
     }
 
-    function testStoreValue(expected: any, done: DoneFn) {
-      store = TestBed.get(Store);
+    function testStoreValue(expected: any, done: any) {
+      store = TestBed.inject(Store);
 
       store.pipe(take(1)).subscribe({
         next(val) {
@@ -199,7 +195,7 @@ describe('ngRx Store', () => {
     it('should let you select state with a key name', () => {
       const counterSteps = hot(actionSequence, actionValues);
 
-      counterSteps.subscribe(action => store.dispatch(action));
+      counterSteps.subscribe((action) => store.dispatch(action));
 
       const counterStateWithString = store.pipe(select('counter1'));
 
@@ -214,9 +210,9 @@ describe('ngRx Store', () => {
     it('should let you select state with a selector function', () => {
       const counterSteps = hot(actionSequence, actionValues);
 
-      counterSteps.subscribe(action => store.dispatch(action));
+      counterSteps.subscribe((action) => store.dispatch(action));
 
-      const counterStateWithFunc = store.pipe(select(s => s.counter1));
+      const counterStateWithFunc = store.pipe(select((s) => s.counter1));
 
       const stateSequence = 'i-v--w--x--y--z';
       const counter1Values = { i: 0, v: 1, w: 2, x: 1, y: 0, z: 1 };
@@ -235,7 +231,7 @@ describe('ngRx Store', () => {
     it('should increment and decrement counter1', () => {
       const counterSteps = hot(actionSequence, actionValues);
 
-      counterSteps.subscribe(action => store.dispatch(action));
+      counterSteps.subscribe((action) => store.dispatch(action));
 
       const counterState = store.pipe(select('counter1'));
 
@@ -248,7 +244,7 @@ describe('ngRx Store', () => {
     it('should increment and decrement counter1 using the dispatcher', () => {
       const counterSteps = hot(actionSequence, actionValues);
 
-      counterSteps.subscribe(action => dispatcher.next(action));
+      counterSteps.subscribe((action) => dispatcher.next(action));
 
       const counterState = store.pipe(select('counter1'));
 
@@ -261,7 +257,7 @@ describe('ngRx Store', () => {
     it('should increment and decrement counter2 separately', () => {
       const counterSteps = hot(actionSequence, actionValues);
 
-      counterSteps.subscribe(action => store.dispatch(action));
+      counterSteps.subscribe((action) => store.dispatch(action));
 
       const counter1State = store.pipe(select('counter1'));
       const counter2State = store.pipe(select('counter2'));
@@ -312,8 +308,8 @@ describe('ngRx Store', () => {
 
     beforeEach(() => {
       setup();
-      const reducerManager = TestBed.get(ReducerManager);
-      const dispatcher = TestBed.get(ReducerManagerDispatcher);
+      const reducerManager = TestBed.inject(ReducerManager);
+      const dispatcher = TestBed.inject(ReducerManagerDispatcher);
       addReducerSpy = spyOn(reducerManager, 'addReducer').and.callThrough();
       removeReducerSpy = spyOn(
         reducerManager,
@@ -330,16 +326,17 @@ describe('ngRx Store', () => {
       expect(removeReducerSpy).toHaveBeenCalledWith(key);
     });
 
-    it(`should work with added / removed reducers`, () => {
+    it(`should work with added / removed reducers`, (done) => {
       store.addReducer(key, counterReducer);
-      store.pipe(take(1)).subscribe(val => {
+      store.pipe(take(1)).subscribe((val) => {
         expect(val.counter4).toBe(0);
       });
 
       store.removeReducer(key);
       store.dispatch({ type: INCREMENT });
-      store.pipe(take(1)).subscribe(val => {
+      store.pipe(take(1)).subscribe((val) => {
         expect(val.counter4).toBeUndefined();
+        done();
       });
     });
 
@@ -369,8 +366,8 @@ describe('ngRx Store', () => {
         imports: [StoreModule.forRoot({})],
       });
 
-      reducerManager = TestBed.get(ReducerManager);
-      const dispatcher = TestBed.get(ReducerManagerDispatcher);
+      reducerManager = TestBed.inject(ReducerManager);
+      const dispatcher = TestBed.inject(ReducerManagerDispatcher);
       reducerManagerDispatcherSpy = spyOn(dispatcher, 'next').and.callThrough();
     });
 
@@ -447,158 +444,21 @@ describe('ngRx Store', () => {
     }
   });
 
-  describe('Mock Store', () => {
-    let mockStore: MockStore<TestAppSchema>;
-    const initialState = { counter1: 0, counter2: 1 };
-
-    beforeEach(() => {
-      TestBed.configureTestingModule({
-        providers: [provideMockStore({ initialState })],
-      });
-
-      mockStore = TestBed.get(Store);
-    });
-
-    it('should set the initial state to a mocked one', (done: DoneFn) => {
-      const fixedState = {
-        counter1: 17,
-        counter2: 11,
-        counter3: 25,
-      };
-      mockStore.setState(fixedState);
-      mockStore.pipe(take(1)).subscribe({
-        next(val) {
-          expect(val).toEqual(fixedState);
-        },
-        error: done.fail,
-        complete: done,
-      });
-    });
-
-    it('should allow tracing dispatched actions', () => {
-      const action = { type: INCREMENT };
-      mockStore.scannedActions$
-        .pipe(skip(1))
-        .subscribe(scannedAction => expect(scannedAction).toEqual(action));
-      mockStore.dispatch(action);
-    });
-
-    it('should allow mocking of store.select with string selector', () => {
-      const mockValue = 5;
-
-      mockStore.overrideSelector('counter1', mockValue);
-
-      mockStore
-        .select('counter1')
-        .subscribe(result => expect(result).toBe(mockValue));
-    });
-
-    it('should allow mocking of store.select with a memoized selector', () => {
-      const mockValue = 5;
-      const selector = createSelector(
-        () => initialState,
-        state => state.counter1
-      );
-
-      mockStore.overrideSelector(selector, mockValue);
-
-      mockStore
-        .select(selector)
-        .subscribe(result => expect(result).toBe(mockValue));
-    });
-
-    it('should allow mocking of store.pipe(select()) with a memoized selector', () => {
-      const mockValue = 5;
-      const selector = createSelector(
-        () => initialState,
-        state => state.counter2
-      );
-
-      mockStore.overrideSelector(selector, mockValue);
-
-      mockStore
-        .pipe(select(selector))
-        .subscribe(result => expect(result).toBe(mockValue));
-    });
-
-    it('should pass through unmocked selectors', () => {
-      const mockValue = 5;
-      const selector = createSelector(
-        () => initialState,
-        state => state.counter1
-      );
-      const selector2 = createSelector(
-        () => initialState,
-        state => state.counter2
-      );
-      const selector3 = createSelector(
-        selector,
-        selector2,
-        (sel1, sel2) => sel1 + sel2
-      );
-
-      mockStore.overrideSelector(selector, mockValue);
-
-      mockStore
-        .pipe(select(selector2))
-        .subscribe(result => expect(result).toBe(1));
-      mockStore
-        .pipe(select(selector3))
-        .subscribe(result => expect(result).toBe(6));
-    });
-
-    it('should allow you reset mocked selectors', () => {
-      const mockValue = 5;
-      const selector = createSelector(
-        () => initialState,
-        state => state.counter1
-      );
-      const selector2 = createSelector(
-        () => initialState,
-        state => state.counter2
-      );
-      const selector3 = createSelector(
-        selector,
-        selector2,
-        (sel1, sel2) => sel1 + sel2
-      );
-
-      mockStore
-        .pipe(select(selector3))
-        .subscribe(result => expect(result).toBe(1));
-
-      mockStore.overrideSelector(selector, mockValue);
-      mockStore.overrideSelector(selector2, mockValue);
-      selector3.release();
-
-      mockStore
-        .pipe(select(selector3))
-        .subscribe(result => expect(result).toBe(10));
-
-      mockStore.resetSelectors();
-      selector3.release();
-
-      mockStore
-        .pipe(select(selector3))
-        .subscribe(result => expect(result).toBe(1));
-    });
-  });
-
   describe('Meta Reducers', () => {
     let metaReducerContainer: any;
     let metaReducerSpy1: Spy;
     let metaReducerSpy2: Spy;
 
     beforeEach(() => {
-      metaReducerContainer = (function() {
+      metaReducerContainer = (function () {
         function metaReducer1(reducer: ActionReducer<any, any>) {
-          return function(state: any, action: Action) {
+          return function (state: any, action: Action) {
             return reducer(state, action);
           };
         }
 
         function metaReducer2(reducer: ActionReducer<any, any>) {
-          return function(state: any, action: Action) {
+          return function (state: any, action: Action) {
             return reducer(state, action);
           };
         }
@@ -652,7 +512,7 @@ describe('ngRx Store', () => {
         ],
       });
 
-      const mockStore = TestBed.get(Store);
+      const mockStore = TestBed.inject(Store);
       const action = { type: INCREMENT };
 
       mockStore.dispatch(action);
@@ -661,7 +521,7 @@ describe('ngRx Store', () => {
       expect(metaReducerSpy2).toHaveBeenCalledWith(counterReducer2);
     });
 
-    it('should initial state with value', (done: DoneFn) => {
+    it('should initial state with value', (done: any) => {
       const counterInitialState = 2;
       TestBed.configureTestingModule({
         imports: [
@@ -677,7 +537,7 @@ describe('ngRx Store', () => {
         ],
       });
 
-      const mockStore = TestBed.get(Store);
+      const mockStore = TestBed.inject(Store);
 
       mockStore.pipe(take(1)).subscribe({
         next(val: any) {
@@ -698,7 +558,7 @@ describe('ngRx Store', () => {
       FEATURE_CONFIG2_TOKEN = new InjectionToken('Feature Config2');
     });
 
-    it('should initial state with value', (done: DoneFn) => {
+    it('should initial state with value', (done: any) => {
       const initialState = { counter1: 1 };
       const featureKey = 'counter';
 
@@ -719,7 +579,7 @@ describe('ngRx Store', () => {
         ],
       });
 
-      const mockStore = TestBed.get(Store);
+      const mockStore = TestBed.inject(Store);
 
       mockStore.pipe(take(1)).subscribe({
         next(val: any) {
@@ -730,7 +590,7 @@ describe('ngRx Store', () => {
       });
     });
 
-    it('should initial state with value for multi features', (done: DoneFn) => {
+    it('should initial state with value for multi features', (done: any) => {
       const initialState = 1;
       const initialState2 = 2;
       const initialState3 = 3;
@@ -767,7 +627,7 @@ describe('ngRx Store', () => {
         ],
       });
 
-      const mockStore = TestBed.get(Store);
+      const mockStore = TestBed.inject(Store);
 
       mockStore.pipe(take(1)).subscribe({
         next(val: any) {
@@ -781,15 +641,15 @@ describe('ngRx Store', () => {
     });
 
     it('should create a meta reducer with config injection token and call it with the expected reducer', () => {
-      const metaReducerContainer = (function() {
+      const metaReducerContainer = (function () {
         function metaReducer1(reducer: ActionReducer<any, any>) {
-          return function(state: any, action: Action) {
+          return function (state: any, action: Action) {
             return reducer(state, action);
           };
         }
 
         function metaReducer2(reducer: ActionReducer<any, any>) {
-          return function(state: any, action: Action) {
+          return function (state: any, action: Action) {
             return reducer(state, action);
           };
         }
@@ -835,7 +695,7 @@ describe('ngRx Store', () => {
           },
         ],
       });
-      const mockStore = TestBed.get(Store);
+      const mockStore = TestBed.inject(Store);
       const action = { type: INCREMENT };
       mockStore.dispatch(action);
 

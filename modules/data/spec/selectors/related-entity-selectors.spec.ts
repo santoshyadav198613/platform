@@ -1,15 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import {
-  Action,
-  createSelector,
-  Selector,
-  StoreModule,
-  Store,
-} from '@ngrx/store';
+import { TestBed } from '@angular/core/testing';
+import { createSelector, StoreModule, Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { Update } from '@ngrx/entity';
 
-import { Observable, Subject } from 'rxjs';
+import { Observable } from 'rxjs';
 import { skip } from 'rxjs/operators';
 
 import {
@@ -53,9 +47,9 @@ describe('Related-entity Selectors', () => {
       ],
     });
 
-    store = TestBed.get(Store);
-    eaFactory = TestBed.get(EntityActionFactory);
-    entitySelectorsFactory = TestBed.get(EntitySelectorsFactory);
+    store = TestBed.inject(Store);
+    eaFactory = TestBed.inject(EntityActionFactory);
+    entitySelectorsFactory = TestBed.inject(EntitySelectorsFactory);
     initializeCache(eaFactory, store);
   });
 
@@ -81,7 +75,7 @@ describe('Related-entity Selectors', () => {
       const { selectHeroMap, selectSidekickMap } = setCollectionSelectors();
       const selectHero = createSelector(
         selectHeroMap,
-        heroes => heroes[heroId]
+        (heroes) => heroes[heroId]
       );
       const selectSideKick = createSelector(
         selectHero,
@@ -96,18 +90,18 @@ describe('Related-entity Selectors', () => {
 
     // Note: async done() callback ensures test passes only if subscribe(successCallback()) called.
 
-    it('should get Alpha Hero sidekick', (done: DoneFn) => {
-      createHeroSidekickSelector$(1).subscribe(sk => {
+    it('should get Alpha Hero sidekick', (done: any) => {
+      createHeroSidekickSelector$(1).subscribe((sk) => {
         expect(sk.name).toBe('Bob');
         done();
       });
     });
 
-    it('should get Alpha Hero updated sidekick', (done: DoneFn) => {
+    it('should get Alpha Hero updated sidekick', (done: any) => {
       // Skip the initial sidekick and check the one after update
       createHeroSidekickSelector$(1)
         .pipe(skip(1))
-        .subscribe(sk => {
+        .subscribe((sk) => {
           expect(sk.name).toBe('Robert');
           done();
         });
@@ -121,11 +115,11 @@ describe('Related-entity Selectors', () => {
       store.dispatch(action);
     });
 
-    it('should get Alpha Hero changed sidekick', (done: DoneFn) => {
+    it('should get Alpha Hero changed sidekick', (done: any) => {
       // Skip the initial sidekick and check the one after update
       createHeroSidekickSelector$(1)
         .pipe(skip(1))
-        .subscribe(sk => {
+        .subscribe((sk) => {
           expect(sk.name).toBe('Sally');
           done();
         });
@@ -139,22 +133,19 @@ describe('Related-entity Selectors', () => {
       store.dispatch(action);
     });
 
-    it('changing a different hero should NOT trigger first hero selector', (done: DoneFn) => {
+    it('changing a different hero should NOT trigger first hero selector', (done: any) => {
       let alphaCount = 0;
 
-      createHeroSidekickSelector$(1).subscribe(sk => {
+      createHeroSidekickSelector$(1).subscribe((sk) => {
         alphaCount += 1;
       });
 
       // update a different hero's sidekick from fk=2 (Sally) to fk=1 (Bob)
       createHeroSidekickSelector$(2)
         .pipe(skip(1))
-        .subscribe(sk => {
+        .subscribe((sk) => {
           expect(sk.name).toBe('Bob');
-          expect(alphaCount).toEqual(
-            1,
-            'should only callback for Hero #1 once'
-          );
+          expect(alphaCount).toEqual(1);
           done();
         });
 
@@ -166,27 +157,27 @@ describe('Related-entity Selectors', () => {
       store.dispatch(action);
     });
 
-    it('should get undefined sidekick if hero not found', (done: DoneFn) => {
-      createHeroSidekickSelector$(1234).subscribe(sk => {
+    it('should get undefined sidekick if hero not found', (done: any) => {
+      createHeroSidekickSelector$(1234).subscribe((sk) => {
         expect(sk).toBeUndefined();
         done();
       });
     });
 
-    it('should get undefined sidekick from Gamma because it has no sidekickFk', (done: DoneFn) => {
-      createHeroSidekickSelector$(3).subscribe(sk => {
+    it('should get undefined sidekick from Gamma because it has no sidekickFk', (done: any) => {
+      createHeroSidekickSelector$(3).subscribe((sk) => {
         expect(sk).toBeUndefined();
         done();
       });
     });
 
-    it('should get Gamma sidekick after creating and assigning one', (done: DoneFn) => {
+    it('should get Gamma sidekick after creating and assigning one', (done: any) => {
       // Skip(1), the initial state in which Gamma has no sidekick
       // Note that BOTH dispatches complete synchronously, before the selector updates
       // so we only have to skip one.
       createHeroSidekickSelector$(3)
         .pipe(skip(1))
-        .subscribe(sk => {
+        .subscribe((sk) => {
           expect(sk.name).toBe('Robin');
           done();
         });
@@ -221,22 +212,19 @@ describe('Related-entity Selectors', () => {
 
       const selectHeroBattleMap = createSelector(
         selectBattleEntities,
-        battles =>
-          battles.reduce(
-            (acc, battle) => {
-              const hid = battle.heroFk;
-              if (hid) {
-                const hbs = acc[hid];
-                if (hbs) {
-                  hbs.push(battle);
-                } else {
-                  acc[hid] = [battle];
-                }
+        (battles) =>
+          battles.reduce((acc, battle) => {
+            const hid = battle.heroFk;
+            if (hid) {
+              const hbs = acc[hid];
+              if (hbs) {
+                hbs.push(battle);
+              } else {
+                acc[hid] = [battle];
               }
-              return acc;
-            },
-            {} as { [heroId: number]: Battle[] }
-          )
+            }
+            return acc;
+          }, {} as { [heroId: number]: Battle[] })
       );
 
       return {
@@ -250,7 +238,7 @@ describe('Related-entity Selectors', () => {
 
       const selectHero = createSelector(
         selectHeroMap,
-        heroes => heroes[heroId]
+        (heroes) => heroes[heroId]
       );
 
       const selectHeroBattles = createSelector(
@@ -267,18 +255,18 @@ describe('Related-entity Selectors', () => {
     // TODO: more tests
     // Note: async done() callback ensures test passes only if subscribe(successCallback()) called.
 
-    it('should get Alpha Hero battles', (done: DoneFn) => {
-      createHeroBattlesSelector$(1).subscribe(battles => {
-        expect(battles.length).toBe(3, 'Alpha should have 3 battles');
+    it('should get Alpha Hero battles', (done: any) => {
+      createHeroBattlesSelector$(1).subscribe((battles) => {
+        expect(battles.length).toBe(3);
         done();
       });
     });
 
-    it('should get Alpha Hero battles again after updating one of its battles', (done: DoneFn) => {
+    it('should get Alpha Hero battles again after updating one of its battles', (done: any) => {
       // Skip the initial sidekick and check the one after update
       createHeroBattlesSelector$(1)
         .pipe(skip(1))
-        .subscribe(battles => {
+        .subscribe((battles) => {
           expect(battles[0].name).toBe('Scalliwag');
           done();
         });
@@ -292,9 +280,9 @@ describe('Related-entity Selectors', () => {
       store.dispatch(action);
     });
 
-    it('Gamma Hero should have no battles', (done: DoneFn) => {
-      createHeroBattlesSelector$(3).subscribe(battles => {
-        expect(battles.length).toBe(0, 'Gamma should have no battles');
+    it('Gamma Hero should have no battles', (done: any) => {
+      createHeroBattlesSelector$(3).subscribe((battles) => {
+        expect(battles.length).toBe(0);
         done();
       });
     });
@@ -315,22 +303,19 @@ describe('Related-entity Selectors', () => {
 
       const selectHeroPowerIds = createSelector(
         selectHeroPowerMapEntities,
-        hpMaps =>
-          hpMaps.reduce(
-            (acc, hpMap) => {
-              const hid = hpMap.heroFk;
-              if (hid) {
-                const hpIds = acc[hid];
-                if (hpIds) {
-                  hpIds.push(hpMap.powerFk);
-                } else {
-                  acc[hid] = [hpMap.powerFk];
-                }
+        (hpMaps) =>
+          hpMaps.reduce((acc, hpMap) => {
+            const hid = hpMap.heroFk;
+            if (hid) {
+              const hpIds = acc[hid];
+              if (hpIds) {
+                hpIds.push(hpMap.powerFk);
+              } else {
+                acc[hid] = [hpMap.powerFk];
               }
-              return acc;
-            },
-            {} as { [heroId: number]: number[] }
-          )
+            }
+            return acc;
+          }, {} as { [heroId: number]: number[] })
       );
 
       return {
@@ -349,7 +334,7 @@ describe('Related-entity Selectors', () => {
 
       const selectHero = createSelector(
         selectHeroMap,
-        heroes => heroes[heroId]
+        (heroes) => heroes[heroId]
       );
 
       const selectHeroPowers = createSelector(
@@ -359,7 +344,9 @@ describe('Related-entity Selectors', () => {
         (hero, heroPowerIds, powerMap) => {
           const hid = hero && hero.id;
           const pids = (hid && heroPowerIds[hid]) || [];
-          const powers = pids.map(id => powerMap[id]).filter(power => power);
+          const powers = pids
+            .map((id) => powerMap[id])
+            .filter((power) => power);
           return powers;
         }
       );
@@ -369,26 +356,26 @@ describe('Related-entity Selectors', () => {
     // TODO: more tests
     // Note: async done() callback ensures test passes only if subscribe(successCallback()) called.
 
-    it('should get Alpha Hero powers', (done: DoneFn) => {
-      createHeroPowersSelector$(1).subscribe(powers => {
-        expect(powers.length).toBe(3, 'Alpha should have 3 powers');
+    it('should get Alpha Hero powers', (done: any) => {
+      createHeroPowersSelector$(1).subscribe((powers) => {
+        expect(powers.length).toBe(3);
         done();
       });
     });
 
-    it('should get Beta Hero power', (done: DoneFn) => {
-      createHeroPowersSelector$(2).subscribe(powers => {
-        expect(powers.length).toBe(1, 'Beta should have 1 power');
+    it('should get Beta Hero power', (done: any) => {
+      createHeroPowersSelector$(2).subscribe((powers) => {
+        expect(powers.length).toBe(1);
         expect(powers[0].name).toBe('Invisibility');
         done();
       });
     });
 
-    it('Beta Hero should have no powers after delete', (done: DoneFn) => {
+    it('Beta Hero should have no powers after delete', (done: any) => {
       createHeroPowersSelector$(2)
         .pipe(skip(1))
-        .subscribe(powers => {
-          expect(powers.length).toBe(0, 'Beta should have no powers');
+        .subscribe((powers) => {
+          expect(powers.length).toBe(0);
           done();
         });
 
@@ -401,9 +388,9 @@ describe('Related-entity Selectors', () => {
       store.dispatch(action);
     });
 
-    it('Gamma Hero should have no powers', (done: DoneFn) => {
-      createHeroPowersSelector$(3).subscribe(powers => {
-        expect(powers.length).toBe(0, 'Gamma should have no powers');
+    it('Gamma Hero should have no powers', (done: any) => {
+      createHeroPowersSelector$(3).subscribe((powers) => {
+        expect(powers.length).toBe(0);
         done();
       });
     });

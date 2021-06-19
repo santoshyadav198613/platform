@@ -1,38 +1,36 @@
 import { Inject, Injectable, InjectionToken } from '@angular/core';
-import { Action } from '@ngrx/store';
-import { empty, of, Observable } from 'rxjs';
+import { Action, UPDATE } from '@ngrx/store';
+import { EMPTY, Observable, of } from 'rxjs';
 import {
+  catchError,
+  concatMap,
+  debounceTime,
   filter,
   map,
   share,
   switchMap,
-  takeUntil,
-  concatMap,
-  debounceTime,
-  timeout,
-  catchError,
   take,
+  takeUntil,
+  timeout,
 } from 'rxjs/operators';
 
-import { PERFORM_ACTION, IMPORT_STATE } from './actions';
+import { IMPORT_STATE, PERFORM_ACTION } from './actions';
 import {
   SerializationOptions,
   STORE_DEVTOOLS_CONFIG,
   StoreDevtoolsConfig,
 } from './config';
+import { DevtoolsDispatcher } from './devtools-dispatcher';
 import { LiftedAction, LiftedState } from './reducer';
 import {
+  isActionFiltered,
   sanitizeAction,
   sanitizeActions,
   sanitizeState,
   sanitizeStates,
-  unliftState,
-  isActionFiltered,
-  filterLiftedState,
   shouldFilterActions,
+  unliftState,
 } from './utils';
-import { UPDATE } from '@ngrx/store';
-import { DevtoolsDispatcher } from './devtools-dispatcher';
 
 export const ExtensionActionTypes = {
   START: 'START',
@@ -41,9 +39,9 @@ export const ExtensionActionTypes = {
   ACTION: 'ACTION',
 };
 
-export const REDUX_DEVTOOLS_EXTENSION = new InjectionToken<
-  ReduxDevtoolsExtension
->('Redux Devtools Extension');
+export const REDUX_DEVTOOLS_EXTENSION = new InjectionToken<ReduxDevtoolsExtension>(
+  '@ngrx/store-devtools Redux Devtools Extension'
+);
 
 export interface ReduxDevtoolsExtensionConnection {
   subscribe(listener: (change: any) => void): void;
@@ -56,6 +54,7 @@ export interface ReduxDevtoolsExtensionConfig {
   features?: object | boolean;
   name: string | undefined;
   maxAge?: number;
+  autoPause?: boolean;
   serialize?: boolean | SerializationOptions;
 }
 
@@ -69,11 +68,11 @@ export interface ReduxDevtoolsExtension {
 @Injectable()
 export class DevtoolsExtension {
   private devtoolsExtension: ReduxDevtoolsExtension;
-  private extensionConnection: ReduxDevtoolsExtensionConnection;
+  private extensionConnection!: ReduxDevtoolsExtensionConnection;
 
-  liftedActions$: Observable<any>;
-  actions$: Observable<any>;
-  start$: Observable<any>;
+  liftedActions$!: Observable<any>;
+  actions$!: Observable<any>;
+  start$!: Observable<any>;
 
   constructor(
     @Inject(REDUX_DEVTOOLS_EXTENSION) devtoolsExtension: ReduxDevtoolsExtension,
@@ -162,10 +161,10 @@ export class DevtoolsExtension {
 
   private createChangesObservable(): Observable<any> {
     if (!this.devtoolsExtension) {
-      return empty();
+      return EMPTY;
     }
 
-    return new Observable(subscriber => {
+    return new Observable((subscriber) => {
       const connection = this.devtoolsExtension.connect(
         this.getExtensionConfig(this.config)
       );
@@ -193,8 +192,8 @@ export class DevtoolsExtension {
 
     // Listen for lifted actions
     const liftedActions$ = changes$.pipe(
-      filter(change => change.type === ExtensionActionTypes.DISPATCH),
-      map(change => this.unwrapAction(change.payload)),
+      filter((change) => change.type === ExtensionActionTypes.DISPATCH),
+      map((change) => this.unwrapAction(change.payload)),
       concatMap((action: any) => {
         if (action.type === IMPORT_STATE) {
           // State imports may happen in two situations:
@@ -206,7 +205,7 @@ export class DevtoolsExtension {
           // As soon as there is no UPDATE action within 1 second,
           // it is assumed that all reducers are loaded.
           return this.dispatcher.pipe(
-            filter(action => action.type === UPDATE),
+            filter((action) => action.type === UPDATE),
             timeout(1000),
             debounceTime(1000),
             map(() => action),
@@ -221,8 +220,8 @@ export class DevtoolsExtension {
 
     // Listen for unlifted actions
     const actions$ = changes$.pipe(
-      filter(change => change.type === ExtensionActionTypes.ACTION),
-      map(change => this.unwrapAction(change.payload))
+      filter((change) => change.type === ExtensionActionTypes.ACTION),
+      map((change) => this.unwrapAction(change.payload))
     );
 
     const actionsUntilStop$ = actions$.pipe(takeUntil(stop$));
@@ -243,6 +242,7 @@ export class DevtoolsExtension {
       name: config.name,
       features: config.features,
       serialize: config.serialize,
+      autoPause: config.autoPause ?? false,
       // The action/state sanitizers are not added to the config
       // because sanitation is done in this class already.
       // It is done before sending it to the devtools extension for consistency:

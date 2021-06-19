@@ -11,6 +11,8 @@ import {
   template,
   url,
   move,
+  filter,
+  noop,
 } from '@angular-devkit/schematics';
 import { Path, dirname } from '@angular-devkit/core';
 import * as ts from 'typescript';
@@ -25,7 +27,8 @@ import {
   findModuleFromOptions,
   addImportToModule,
   parseName,
-} from '@ngrx/schematics/schematics-core';
+  visitNgModuleImports,
+} from '../../schematics-core';
 import { Schema as StoreOptions } from './schema';
 
 function addImportToNgModule(options: StoreOptions): Rule {
@@ -61,14 +64,19 @@ function addImportToNgModule(options: StoreOptions): Rule {
       `${options.path}/environments/environment`
     );
 
+    const rootStoreReducers = options.minimal ? `{}` : `reducers`;
+    const rootStoreConfig = options.minimal ? `` : `, { metaReducers }`;
+
     const storeNgModuleImport = addImportToModule(
       source,
       modulePath,
       options.root
-        ? `StoreModule.forRoot(reducers, { metaReducers })`
-        : `StoreModule.forFeature('${stringUtils.camelize(
+        ? `StoreModule.forRoot(${rootStoreReducers}${rootStoreConfig})`
+        : `StoreModule.forFeature(from${stringUtils.classify(
             options.name
-          )}', from${stringUtils.classify(
+          )}.${stringUtils.camelize(
+            options.name
+          )}FeatureKey, from${stringUtils.classify(
             options.name
           )}.reducers, { metaReducers: from${stringUtils.classify(
             options.name
@@ -78,29 +86,47 @@ function addImportToNgModule(options: StoreOptions): Rule {
 
     let commonImports = [
       insertImport(source, modulePath, 'StoreModule', '@ngrx/store'),
-      options.root
-        ? insertImport(
-            source,
-            modulePath,
-            'reducers, metaReducers',
-            relativePath
-          )
-        : insertImport(
-            source,
-            modulePath,
-            `* as from${stringUtils.classify(options.name)}`,
-            relativePath,
-            true
-          ),
       storeNgModuleImport,
     ];
+
+    if (options.root && !options.minimal) {
+      commonImports = commonImports.concat([
+        insertImport(
+          source,
+          modulePath,
+          'reducers, metaReducers',
+          relativePath
+        ),
+      ]);
+    } else if (!options.root) {
+      commonImports = commonImports.concat([
+        insertImport(
+          source,
+          modulePath,
+          `* as from${stringUtils.classify(options.name)}`,
+          relativePath,
+          true
+        ),
+      ]);
+    }
+
     let rootImports: (Change | undefined)[] = [];
 
     if (options.root) {
+      let hasImports = false;
+      visitNgModuleImports(source, (_, importNodes) => {
+        hasImports = importNodes.length > 0;
+      });
+
+      // `addImportToModule` adds a comma to imports when there are already imports present
+      // because at this time the store import hasn't been committed yet, `addImportToModule` wont add a comma
+      // so we have to add it here for empty import arrays
+      const adjectiveComma = hasImports ? '' : ', ';
+
       const storeDevtoolsNgModuleImport = addImportToModule(
         source,
         modulePath,
-        `!environment.production ? StoreDevtoolsModule.instrument() : []`,
+        `${adjectiveComma}!environment.production ? StoreDevtoolsModule.instrument() : []`,
         relativePath
       ).shift();
 
@@ -129,7 +155,7 @@ function addImportToNgModule(options: StoreOptions): Rule {
   };
 }
 
-export default function(options: StoreOptions): Rule {
+export default function (options: StoreOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     if (!options.name && !options.root) {
       throw new Error(`Please provide a name for the feature state`);
@@ -161,6 +187,7 @@ export default function(options: StoreOptions): Rule {
     }
 
     const templateSource = apply(url('./files'), [
+      options.root && options.minimal ? filter((_) => false) : noop(),
       applyTemplates({
         ...stringUtils,
         ...(options as object),

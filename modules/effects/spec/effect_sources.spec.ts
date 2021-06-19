@@ -1,8 +1,16 @@
 import { ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { cold, getTestScheduler } from 'jasmine-marbles';
-import { concat, NEVER, Observable, of, throwError, timer } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { cold, hot, getTestScheduler } from 'jasmine-marbles';
+import {
+  concat,
+  NEVER,
+  Observable,
+  of,
+  throwError,
+  timer,
+  Subject,
+} from 'rxjs';
+import { map, mapTo } from 'rxjs/operators';
 
 import {
   Effect,
@@ -10,17 +18,29 @@ import {
   OnIdentifyEffects,
   OnInitEffects,
   createEffect,
+  EFFECTS_ERROR_HANDLER,
+  EffectsErrorHandler,
+  Actions,
 } from '../';
+import { defaultEffectsErrorHandler } from '../src/effects_error_handler';
+import { EffectsRunner } from '../src/effects_runner';
 import { Store } from '@ngrx/store';
+import { ofType } from '../src';
 
 describe('EffectSources', () => {
   let mockErrorReporter: ErrorHandler;
   let effectSources: EffectSources;
+  let effectsErrorHandler: EffectsErrorHandler;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        {
+          provide: EFFECTS_ERROR_HANDLER,
+          useValue: defaultEffectsErrorHandler,
+        },
         EffectSources,
+        EffectsRunner,
         {
           provide: Store,
           useValue: {
@@ -30,8 +50,12 @@ describe('EffectSources', () => {
       ],
     });
 
-    mockErrorReporter = TestBed.get(ErrorHandler);
-    effectSources = TestBed.get(EffectSources);
+    const effectsRunner = TestBed.inject(EffectsRunner);
+    effectsRunner.start();
+
+    mockErrorReporter = TestBed.inject(ErrorHandler);
+    effectSources = TestBed.inject(EffectSources);
+    effectsErrorHandler = TestBed.inject(EFFECTS_ERROR_HANDLER);
 
     spyOn(mockErrorReporter, 'handleError');
   });
@@ -45,22 +69,13 @@ describe('EffectSources', () => {
     expect(effectSources.next).toHaveBeenCalledWith(effectSource);
   });
 
-  it('should dispatch an action on ngrxOnInitEffects after being registered', () => {
-    class EffectWithInitAction implements OnInitEffects {
-      ngrxOnInitEffects() {
-        return { type: '[EffectWithInitAction] Init' };
-      }
+  describe('toActions() Operator', () => {
+    function toActions(source: any): Observable<any> {
+      source['errorHandler'] = mockErrorReporter;
+      source['effectsErrorHandler'] = effectsErrorHandler;
+      return (effectSources as any)['toActions'].call(source);
     }
 
-    effectSources.addEffects(new EffectWithInitAction());
-
-    const store = TestBed.get(Store);
-    expect(store.dispatch).toHaveBeenCalledWith({
-      type: '[EffectWithInitAction] Init',
-    });
-  });
-
-  describe('toActions() Operator', () => {
     describe('with @Effect()', () => {
       const a = { type: 'From Source A' };
       const b = { type: 'From Source B' };
@@ -71,7 +86,7 @@ describe('EffectSources', () => {
       const i = { type: 'From Source Identifier' };
       const i2 = { type: 'From Source Identifier 2' };
 
-      let circularRef = {} as any;
+      const circularRef = {} as any;
       circularRef.circularRef = circularRef;
       const g = { circularRef };
 
@@ -235,6 +250,53 @@ describe('EffectSources', () => {
         );
       });
 
+      it('should report an error if an effect throws one', () => {
+        const sources$ = of(new SourceError());
+
+        toActions(sources$).subscribe();
+
+        expect(mockErrorReporter.handleError).toHaveBeenCalledWith(
+          new Error('An Error')
+        );
+      });
+
+      it('should resubscribe on error by default', () => {
+        class Eff {
+          @Effect()
+          b$ = hot('a--e--b--e--c--e--d').pipe(
+            map((v) => {
+              if (v == 'e') throw new Error('An Error');
+              return v;
+            })
+          );
+        }
+
+        const sources$ = of(new Eff());
+
+        //                       👇 'e' is ignored.
+        const expected = cold('a-----b-----c-----d');
+        expect(toActions(sources$)).toBeObservable(expected);
+      });
+
+      it('should not resubscribe on error when useEffectsErrorHandler is false', () => {
+        class Eff {
+          @Effect({ useEffectsErrorHandler: false })
+          b$ = hot('a--b--c--d').pipe(
+            map((v) => {
+              if (v == 'b') throw new Error('An Error');
+              return v;
+            })
+          );
+        }
+
+        const sources$ = of(new Eff());
+
+        //                       👇 completes.
+        const expected = cold('a--|');
+
+        expect(toActions(sources$)).toBeObservable(expected);
+      });
+
       it(`should not break when the action in the error message can't be stringified`, () => {
         const sources$ = of(new SourceG());
 
@@ -257,11 +319,6 @@ describe('EffectSources', () => {
 
         expect(output).toBeObservable(expected);
       });
-
-      function toActions(source: any): Observable<any> {
-        source['errorHandler'] = mockErrorReporter;
-        return (effectSources as any)['toActions'].call(source);
-      }
     });
 
     describe('with createEffect()', () => {
@@ -273,8 +330,9 @@ describe('EffectSources', () => {
       const f = null;
       const i = { type: 'From Source Identifier' };
       const i2 = { type: 'From Source Identifier 2' };
+      const initAction = { type: '[SourceWithInitAction] Init' };
 
-      let circularRef = {} as any;
+      const circularRef = {} as any;
       circularRef.circularRef = circularRef;
       const g = { circularRef };
 
@@ -317,7 +375,7 @@ describe('EffectSources', () => {
       }
 
       class SourceError {
-        e$ = createEffect(() => throwError(error));
+        e$ = createEffect(() => throwError(error) as any);
       }
 
       class SourceH {
@@ -356,6 +414,35 @@ describe('EffectSources', () => {
         }
 
         constructor(identifier: string) {
+          this.effectIdentifier = identifier;
+        }
+      }
+      class SourceWithInitAction implements OnInitEffects, OnIdentifyEffects {
+        effectIdentifier: string;
+
+        effectOne = createEffect(() => {
+          return this.actions$.pipe(
+            ofType('Action 1'),
+            mapTo({ type: 'Action 1 Response' })
+          );
+        });
+
+        effectTwo = createEffect(() => {
+          return this.actions$.pipe(
+            ofType('Action 2'),
+            mapTo({ type: 'Action 2 Response' })
+          );
+        });
+
+        ngrxOnInitEffects() {
+          return initAction;
+        }
+
+        ngrxOnIdentifyEffects() {
+          return this.effectIdentifier;
+        }
+
+        constructor(private actions$: Actions, identifier: string = '') {
           this.effectIdentifier = identifier;
         }
       }
@@ -413,7 +500,44 @@ describe('EffectSources', () => {
           c: new SourceWithIdentifier('b'),
           d: new SourceWithIdentifier2('b'),
         });
-        const expected = cold('--a--b--a--b--', { a: i, b: i2 });
+        const expected = cold('--a--b--a--b--', {
+          a: i,
+          b: i2,
+        });
+
+        const output = toActions(sources$);
+
+        expect(output).toBeObservable(expected);
+      });
+
+      it('should start with an  action after being registered with OnInitEffects', () => {
+        const sources$ = cold('--a--', {
+          a: new SourceWithInitAction(new Subject()),
+        });
+        const expected = cold('--a--', { a: initAction });
+
+        const output = toActions(sources$);
+
+        expect(output).toBeObservable(expected);
+      });
+
+      it('should not start twice for the same instance', () => {
+        const sources$ = cold('--a--a--', {
+          a: new SourceWithInitAction(new Subject()),
+        });
+        const expected = cold('--a--', { a: initAction });
+
+        const output = toActions(sources$);
+
+        expect(output).toBeObservable(expected);
+      });
+
+      it('should start twice for the same instance with a different key', () => {
+        const sources$ = cold('--a--b--', {
+          a: new SourceWithInitAction(new Subject(), 'a'),
+          b: new SourceWithInitAction(new Subject(), 'b'),
+        });
+        const expected = cold('--a--a--', { a: initAction });
 
         const output = toActions(sources$);
 
@@ -454,6 +578,78 @@ describe('EffectSources', () => {
         );
       });
 
+      it('should report an error if an effect throws one', () => {
+        const sources$ = of(new SourceError());
+
+        toActions(sources$).subscribe();
+
+        expect(mockErrorReporter.handleError).toHaveBeenCalledWith(
+          new Error('An Error')
+        );
+      });
+
+      it('should resubscribe on error by default', () => {
+        const sources$ = of(
+          new (class {
+            b$ = createEffect(() =>
+              hot('a--e--b--e--c--e--d').pipe(
+                map((v) => {
+                  if (v == 'e') throw new Error('An Error');
+                  return v;
+                })
+              )
+            );
+          })()
+        );
+
+        //                       👇 'e' is ignored.
+        const expected = cold('a-----b-----c-----d');
+
+        expect(toActions(sources$)).toBeObservable(expected);
+      });
+
+      it('should resubscribe on error by default when dispatch is false', () => {
+        const sources$ = of(
+          new (class {
+            b$ = createEffect(
+              () =>
+                hot('a--b--c--d').pipe(
+                  map((v) => {
+                    if (v == 'b') throw new Error('An Error');
+                    return v;
+                  })
+                ),
+              { dispatch: false }
+            );
+          })()
+        );
+        //                    👇 doesn't complete and doesn't dispatch
+        const expected = cold('----------');
+
+        expect(toActions(sources$)).toBeObservable(expected);
+      });
+
+      it('should not resubscribe on error when useEffectsErrorHandler is false', () => {
+        const sources$ = of(
+          new (class {
+            b$ = createEffect(
+              () =>
+                hot('a--b--c--d').pipe(
+                  map((v) => {
+                    if (v == 'b') throw new Error('An Error');
+                    return v;
+                  })
+                ),
+              { dispatch: false, useEffectsErrorHandler: false }
+            );
+          })()
+        );
+        //                       👇 errors with dispatch false
+        const expected = cold('---#', undefined, new Error('An Error'));
+
+        expect(toActions(sources$)).toBeObservable(expected);
+      });
+
       it(`should not break when the action in the error message can't be stringified`, () => {
         const sources$ = of(new SourceG());
 
@@ -476,11 +672,6 @@ describe('EffectSources', () => {
 
         expect(output).toBeObservable(expected);
       });
-
-      function toActions(source: any): Observable<any> {
-        source['errorHandler'] = mockErrorReporter;
-        return (effectSources as any)['toActions'].call(source);
-      }
     });
   });
 

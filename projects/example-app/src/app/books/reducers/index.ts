@@ -1,3 +1,4 @@
+import { Book } from '@example-app/books/models';
 import {
   createSelector,
   createFeatureSelector,
@@ -8,24 +9,25 @@ import * as fromSearch from '@example-app/books/reducers/search.reducer';
 import * as fromBooks from '@example-app/books/reducers/books.reducer';
 import * as fromCollection from '@example-app/books/reducers/collection.reducer';
 import * as fromRoot from '@example-app/reducers';
-import { Book } from '../models/book';
+
+export const booksFeatureKey = 'books';
 
 export interface BooksState {
-  search: fromSearch.State;
-  books: fromBooks.State;
-  collection: fromCollection.State;
+  [fromSearch.searchFeatureKey]: fromSearch.State;
+  [fromBooks.booksFeatureKey]: fromBooks.State;
+  [fromCollection.collectionFeatureKey]: fromCollection.State;
 }
 
 export interface State extends fromRoot.State {
-  books: BooksState;
+  [booksFeatureKey]: BooksState;
 }
 
 /** Provide reducer in AoT-compilation happy way */
 export function reducers(state: BooksState | undefined, action: Action) {
   return combineReducers({
-    search: fromSearch.reducer,
-    books: fromBooks.reducer,
-    collection: fromCollection.reducer,
+    [fromSearch.searchFeatureKey]: fromSearch.reducer,
+    [fromBooks.booksFeatureKey]: fromBooks.reducer,
+    [fromCollection.collectionFeatureKey]: fromCollection.reducer,
   })(state, action);
 }
 
@@ -49,7 +51,9 @@ export function reducers(state: BooksState | undefined, action: Action) {
  * The createFeatureSelector function selects a piece of state from the root of the state object.
  * This is used for selecting feature states that are loaded eagerly or lazily.
  */
-export const getBooksState = createFeatureSelector<State, BooksState>('books');
+export const selectBooksState = createFeatureSelector<BooksState>(
+  booksFeatureKey
+);
 
 /**
  * Every reducer module exports selector functions, however child reducers
@@ -60,14 +64,14 @@ export const getBooksState = createFeatureSelector<State, BooksState>('books');
  * only recompute when arguments change. The created selectors can also be composed
  * together to select different pieces of state.
  */
-export const getBookEntitiesState = createSelector(
-  getBooksState,
-  state => state.books
+export const selectBookEntitiesState = createSelector(
+  selectBooksState,
+  (state) => state.books
 );
 
-export const getSelectedBookId = createSelector(
-  getBookEntitiesState,
-  fromBooks.getSelectedId
+export const selectSelectedBookId = createSelector(
+  selectBookEntitiesState,
+  fromBooks.selectId
 );
 
 /**
@@ -79,15 +83,15 @@ export const getSelectedBookId = createSelector(
  * in selecting records from the entity state.
  */
 export const {
-  selectIds: getBookIds,
-  selectEntities: getBookEntities,
-  selectAll: getAllBooks,
-  selectTotal: getTotalBooks,
-} = fromBooks.adapter.getSelectors(getBookEntitiesState);
+  selectIds: selectBookIds,
+  selectEntities: selectBookEntities,
+  selectAll: selectAllBooks,
+  selectTotal: selectTotalBooks,
+} = fromBooks.adapter.getSelectors(selectBookEntitiesState);
 
-export const getSelectedBook = createSelector(
-  getBookEntities,
-  getSelectedBookId,
+export const selectSelectedBook = createSelector(
+  selectBookEntities,
+  selectSelectedBookId,
   (entities, selectedId) => {
     return selectedId && entities[selectedId];
   }
@@ -97,25 +101,25 @@ export const getSelectedBook = createSelector(
  * Just like with the books selectors, we also have to compose the search
  * reducer's and collection reducer's selectors.
  */
-export const getSearchState = createSelector(
-  getBooksState,
-  (state: BooksState) => state.search
+export const selectSearchState = createSelector(
+  selectBooksState,
+  (state) => state.search
 );
 
-export const getSearchBookIds = createSelector(
-  getSearchState,
+export const selectSearchBookIds = createSelector(
+  selectSearchState,
   fromSearch.getIds
 );
-export const getSearchQuery = createSelector(
-  getSearchState,
+export const selectSearchQuery = createSelector(
+  selectSearchState,
   fromSearch.getQuery
 );
-export const getSearchLoading = createSelector(
-  getSearchState,
+export const selectSearchLoading = createSelector(
+  selectSearchState,
   fromSearch.getLoading
 );
-export const getSearchError = createSelector(
-  getSearchState,
+export const selectSearchError = createSelector(
+  selectSearchState,
   fromSearch.getError
 );
 
@@ -123,47 +127,47 @@ export const getSearchError = createSelector(
  * Some selector functions create joins across parts of state. This selector
  * composes the search result IDs to return an array of books in the store.
  */
-export const getSearchResults = createSelector(
-  getBookEntities,
-  getSearchBookIds,
+export const selectSearchResults = createSelector(
+  selectBookEntities,
+  selectSearchBookIds,
   (books, searchIds) => {
     return searchIds
-      .map(id => books[id])
+      .map((id) => books[id])
       .filter((book): book is Book => book != null);
   }
 );
 
-export const getCollectionState = createSelector(
-  getBooksState,
-  (state: BooksState) => state.collection
+export const selectCollectionState = createSelector(
+  selectBooksState,
+  (state) => state.collection
 );
 
-export const getCollectionLoaded = createSelector(
-  getCollectionState,
+export const selectCollectionLoaded = createSelector(
+  selectCollectionState,
   fromCollection.getLoaded
 );
 export const getCollectionLoading = createSelector(
-  getCollectionState,
+  selectCollectionState,
   fromCollection.getLoading
 );
-export const getCollectionBookIds = createSelector(
-  getCollectionState,
+export const selectCollectionBookIds = createSelector(
+  selectCollectionState,
   fromCollection.getIds
 );
 
-export const getBookCollection = createSelector(
-  getBookEntities,
-  getCollectionBookIds,
+export const selectBookCollection = createSelector(
+  selectBookEntities,
+  selectCollectionBookIds,
   (entities, ids) => {
     return ids
-      .map(id => entities[id])
+      .map((id) => entities[id])
       .filter((book): book is Book => book != null);
   }
 );
 
 export const isSelectedBookInCollection = createSelector(
-  getCollectionBookIds,
-  getSelectedBookId,
+  selectCollectionBookIds,
+  selectSelectedBookId,
   (ids, selected) => {
     return !!selected && ids.indexOf(selected) > -1;
   }

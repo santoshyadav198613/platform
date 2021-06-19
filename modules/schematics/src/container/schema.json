@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "SchematicsNgRxContainer",
+  "$id": "SchematicsNgRxContainer",
   "title": "NgRx Container Options Schema",
   "type": "object",
   "properties": {
@@ -21,18 +21,17 @@
       "$default": {
         "$source": "argv",
         "index": 0
-      }
+      },
+      "x-prompt": "What should be the name of the container component?"
     },
     "inlineStyle": {
       "description": "Specifies if the style will be in the ts file.",
       "type": "boolean",
-      "default": false,
       "alias": "s"
     },
     "inlineTemplate": {
       "description": "Specifies if the template will be in the ts file.",
       "type": "boolean",
-      "default": false,
       "alias": "t"
     },
     "viewEncapsulation": {
@@ -45,7 +44,6 @@
       "description": "Specifies the change detection strategy.",
       "enum": ["Default", "OnPush"],
       "type": "string",
-      "default": "Default",
       "alias": "c"
     },
     "prefix": {
@@ -54,25 +52,21 @@
       "description": "The prefix to apply to generated selectors.",
       "alias": "p"
     },
-    "styleext": {
-      "description": "The file extension to be used for style files.",
-      "type": "string",
-      "default": "css"
+    "style": {
+      "description": "The file extension or preprocessor to use for style files.",
+      "type": "string"
     },
-    "spec": {
+    "skipTests": {
       "type": "boolean",
-      "description": "Specifies if a spec file is generated.",
-      "default": true
+      "description": "When true, does not create test files."
     },
     "flat": {
       "type": "boolean",
-      "description": "Flag to indicate if a dir is created.",
-      "default": false
+      "description": "Flag to indicate if a dir is created."
     },
     "skipImport": {
       "type": "boolean",
-      "description": "Flag to skip the module import.",
-      "default": false
+      "description": "Flag to skip the module import."
     },
     "selector": {
       "type": "string",
@@ -86,7 +80,6 @@
     },
     "export": {
       "type": "boolean",
-      "default": false,
       "description": "Specifies if declaring module exports the component."
     },
     "state": {
@@ -97,6 +90,12 @@
       "type": "string",
       "default": "State",
       "description": "Specifies the interface for the state."
+    },
+    "testDepth": {
+      "description": "Specifies whether to create a unit test or an integration test.",
+      "enum": ["unit", "integration"],
+      "type": "string",
+      "default": "integration"
     }
   },
   "required": []

@@ -1,5 +1,5 @@
 import { ActionReducer, Action } from '@ngrx/store';
-import { InjectionToken, Type } from '@angular/core';
+import { InjectionToken } from '@angular/core';
 
 export type ActionSanitizer = (action: Action, id: number) => Action;
 export type StateSanitizer = (state: any, index: number) => any;
@@ -11,26 +11,39 @@ export type SerializationOptions = {
   refs?: Array<any>;
 };
 export type Predicate = (state: any, action: Action) => boolean;
+export interface DevToolsFeatureOptions {
+  pause?: boolean;
+  lock?: boolean;
+  persist?: boolean;
+  export?: boolean;
+  import?: 'custom' | boolean;
+  jump?: boolean;
+  skip?: boolean;
+  reorder?: boolean;
+  dispatch?: boolean;
+  test?: boolean;
+}
 
 export class StoreDevtoolsConfig {
-  maxAge: number | false;
-  monitor: ActionReducer<any, any>;
+  maxAge: number | false = false;
+  monitor?: ActionReducer<any, any>;
   actionSanitizer?: ActionSanitizer;
   stateSanitizer?: StateSanitizer;
   name?: string;
   serialize?: boolean | SerializationOptions;
   logOnly?: boolean;
-  features?: any;
+  features?: DevToolsFeatureOptions;
   actionsBlocklist?: string[];
   actionsSafelist?: string[];
   predicate?: Predicate;
+  autoPause?: boolean;
 }
 
 export const STORE_DEVTOOLS_CONFIG = new InjectionToken<StoreDevtoolsConfig>(
-  '@ngrx/devtools Options'
+  '@ngrx/store-devtools Options'
 );
 export const INITIAL_OPTIONS = new InjectionToken<StoreDevtoolsConfig>(
-  '@ngrx/devtools Initial Config'
+  '@ngrx/store-devtools Initial Config'
 );
 
 export type StoreDevtoolsOptions =
@@ -44,7 +57,7 @@ export function noMonitor(): null {
 export const DEFAULT_NAME = 'NgRx Store DevTools';
 
 export function createConfig(
-  _options: StoreDevtoolsOptions
+  optionsInput: StoreDevtoolsOptions
 ): StoreDevtoolsConfig {
   const DEFAULT_OPTIONS: StoreDevtoolsConfig = {
     maxAge: false,
@@ -54,7 +67,8 @@ export function createConfig(
     name: DEFAULT_NAME,
     serialize: false,
     logOnly: false,
-    // Add all features explicitely. This prevent buggy behavior for
+    autoPause: false,
+    // Add all features explicitly. This prevent buggy behavior for
     // options like "lock" which might otherwise not show up.
     features: {
       pause: true, // start/pause recording of dispatched actions
@@ -70,7 +84,8 @@ export function createConfig(
     },
   };
 
-  let options = typeof _options === 'function' ? _options() : _options;
+  const options =
+    typeof optionsInput === 'function' ? optionsInput() : optionsInput;
   const logOnly = options.logOnly
     ? { pause: true, export: true, test: true }
     : false;

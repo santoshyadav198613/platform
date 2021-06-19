@@ -43,7 +43,7 @@ export function getReducers(): ActionReducerMap&lt;fromFeature.State&gt; {
 }
 
 @NgModule({
-  imports: [StoreModule.forFeature('feature', FEATURE_REDUCER_TOKEN)],
+  imports: [StoreModule.forFeature(fromFeature.featureKey, FEATURE_REDUCER_TOKEN)],
   providers: [
     {
       provide: FEATURE_REDUCER_TOKEN,
@@ -65,10 +65,12 @@ import { MetaReducer, META_REDUCERS } from '@ngrx/store';
 import { SomeService } from './some.service';
 import * as fromRoot from './reducers';
 
-export function getMetaReducers(
-  some: SomeService
-): MetaReducer&lt;fromRoot.State&gt;[] {
-  // return array of meta reducers;
+export function metaReducerFactory(): MetaReducer&lt;fromRoot.State&gt; {
+  return (reducer: ActionReducer&lt;any&gt;) => (state, action) => {
+    console.log('state', state);
+    console.log('action', action);
+    return reducer(state, action);
+  };
 }
 
 @NgModule({
@@ -76,17 +78,28 @@ export function getMetaReducers(
     {
       provide: META_REDUCERS,
       deps: [SomeService],
-      useFactory: getMetaReducers,
+      useFactory: metaReducerFactory,
+      multi: true,
     },
   ],
 })
 export class AppModule {}
 </code-example>
 
+<div class="alert is-important">
+
+Careful attention should be called to the use of the `multi` 
+property in the provider here for `META_REDUCERS`. As this injection token may be utilized 
+by many libraries concurrently, specifying `multi: true` is critical to ensuring that all 
+library meta reducers are applied to any project that consumes multiple NgRx libraries with 
+registered meta reducers.
+
+</div>
+
 
 ## Injecting Feature Config
 
-To inject the feature store configuration into your module, use should an `InjectionToken` and a `Provider` to register the feature config object through dependency injection.
+To inject the feature store configuration into your module, use an `InjectionToken` and a `Provider` to register the feature config object through dependency injection.
 
 <code-example header="feature.module.ts">
 import { NgModule, InjectionToken } from '@angular/core';
@@ -99,11 +112,17 @@ export const FEATURE_CONFIG_TOKEN = new InjectionToken&lt;StoreConfig&lt;fromFea
 
 export function getConfig(someService: SomeService): StoreConfig&lt;fromFeature.State&gt; {
   // return the config synchronously.
-  return {initialState: someService.getInitialState()};
+  return {
+    initialState: someService.getInitialState(),
+
+    metaReducers: [
+      fromFeature.loggerFactory(someService.loggerConfig())
+    ]
+  };
 }
 
 @NgModule({
-  imports: [StoreModule.forFeature('feature', fromFeature.reducers, FEATURE_CONFIG_TOKEN)],
+  imports: [StoreModule.forFeature(fromFeature.featureKey, fromFeature.reducers, FEATURE_CONFIG_TOKEN)],
   providers: [
     {
       provide: FEATURE_CONFIG_TOKEN,

@@ -1,14 +1,18 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+// disabled because we have lowercase generics for `select`
 import { Injectable, Provider } from '@angular/core';
 import { Observable, Observer, Operator } from 'rxjs';
 import { distinctUntilChanged, map, pluck } from 'rxjs/operators';
 
 import { ActionsSubject } from './actions_subject';
-import { Action, ActionReducer } from './models';
+import { Action, ActionReducer, FunctionIsNotAllowed } from './models';
 import { ReducerManager } from './reducer_manager';
 import { StateObservable } from './state';
 
 @Injectable()
-export class Store<T> extends Observable<T> implements Observer<Action> {
+export class Store<T = object>
+  extends Observable<T>
+  implements Observer<Action> {
   constructor(
     state$: StateObservable,
     private actionsObserver: ActionsSubject,
@@ -20,6 +24,9 @@ export class Store<T> extends Observable<T> implements Observer<Action> {
   }
 
   select<K>(mapFn: (state: T) => K): Observable<K>;
+  /**
+   * @deprecated Selectors with props are deprecated, for more info see {@link https://github.com/ngrx/platform/issues/2980 Github Issue}
+   */
   select<K, Props = any>(
     mapFn: (state: T, props: Props) => K,
     props: Props
@@ -62,16 +69,28 @@ export class Store<T> extends Observable<T> implements Observer<Action> {
     key5: e,
     key6: f
   ): Observable<T[a][b][c][d][e][f]>;
-  /**
-   * This overload is used to support spread operator with
-   * fixed length tuples type in typescript 2.7
-   */
-  select<K = any>(...paths: string[]): Observable<K>;
-  select<Props = any>(
-    pathOrMapFn: ((state: T, props?: Props) => any) | string,
+  select<
+    a extends keyof T,
+    b extends keyof T[a],
+    c extends keyof T[a][b],
+    d extends keyof T[a][b][c],
+    e extends keyof T[a][b][c][d],
+    f extends keyof T[a][b][c][d][e],
+    K = any
+  >(
+    key1: a,
+    key2: b,
+    key3: c,
+    key4: d,
+    key5: e,
+    key6: f,
+    ...paths: string[]
+  ): Observable<K>;
+  select<Props = any, K = any>(
+    pathOrMapFn: ((state: T, props?: Props) => K) | string,
     ...paths: string[]
   ): Observable<any> {
-    return select.call(null, pathOrMapFn, ...paths)(this);
+    return (select as any).call(null, pathOrMapFn, ...paths)(this);
   }
 
   lift<R>(operator: Operator<T, R>): Store<R> {
@@ -81,7 +100,13 @@ export class Store<T> extends Observable<T> implements Observer<Action> {
     return store;
   }
 
-  dispatch<V extends Action = Action>(action: V) {
+  dispatch<V extends Action = Action>(
+    action: V &
+      FunctionIsNotAllowed<
+        V,
+        'Functions are not allowed to be dispatched. Did you forget to call the action creator function?'
+      >
+  ) {
     this.actionsObserver.next(action);
   }
 
@@ -111,13 +136,18 @@ export class Store<T> extends Observable<T> implements Observer<Action> {
 
 export const STORE_PROVIDERS: Provider[] = [Store];
 
+export function select<T, K>(
+  mapFn: (state: T) => K
+): (source$: Observable<T>) => Observable<K>;
+/**
+ * @deprecated Selectors with props are deprecated, for more info see {@link https://github.com/ngrx/platform/issues/2980 Github Issue}
+ */
 export function select<T, Props, K>(
   mapFn: (state: T, props: Props) => K,
-  props?: Props
+  props: Props
 ): (source$: Observable<T>) => Observable<K>;
 export function select<T, a extends keyof T>(
-  key: a,
-  props: null
+  key: a
 ): (source$: Observable<T>) => Observable<T[a]>;
 export function select<T, a extends keyof T, b extends keyof T[a]>(
   key1: a,
@@ -175,17 +205,27 @@ export function select<
   key5: e,
   key6: f
 ): (source$: Observable<T>) => Observable<T[a][b][c][d][e][f]>;
-/**
- * This overload is used to support spread operator with
- * fixed length tuples type in typescript 2.7
- */
-export function select<T, Props = any, K = any>(
-  propsOrPath: Props,
+export function select<
+  T,
+  a extends keyof T,
+  b extends keyof T[a],
+  c extends keyof T[a][b],
+  d extends keyof T[a][b][c],
+  e extends keyof T[a][b][c][d],
+  f extends keyof T[a][b][c][d][e],
+  K = any
+>(
+  key1: a,
+  key2: b,
+  key3: c,
+  key4: d,
+  key5: e,
+  key6: f,
   ...paths: string[]
 ): (source$: Observable<T>) => Observable<K>;
 export function select<T, Props, K>(
   pathOrMapFn: ((state: T, props?: Props) => any) | string,
-  propsOrPath: Props | string,
+  propsOrPath?: Props | string,
   ...paths: string[]
 ) {
   return function selectOperator(source$: Observable<T>): Observable<K> {
@@ -196,7 +236,7 @@ export function select<T, Props, K>(
       mapped$ = source$.pipe(pluck(pathOrMapFn, ...pathSlices));
     } else if (typeof pathOrMapFn === 'function') {
       mapped$ = source$.pipe(
-        map(source => pathOrMapFn(source, <Props>propsOrPath))
+        map((source) => pathOrMapFn(source, <Props>propsOrPath))
       );
     } else {
       throw new TypeError(

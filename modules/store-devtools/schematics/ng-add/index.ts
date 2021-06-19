@@ -1,3 +1,4 @@
+import * as ts from 'typescript';
 import {
   Rule,
   SchematicContext,
@@ -18,9 +19,8 @@ import {
   addPackageToPackageJson,
   platformVersion,
   parseName,
-} from '@ngrx/store-devtools/schematics-core';
+} from '../../schematics-core';
 import { Path, dirname } from '@angular-devkit/core';
-import * as ts from 'typescript';
 import { Schema as StoreDevtoolsOptions } from './schema';
 
 function addImportToNgModule(options: StoreDevtoolsOptions): Rule {
@@ -51,9 +51,7 @@ function addImportToNgModule(options: StoreDevtoolsOptions): Rule {
     const [instrumentNgModuleImport] = addImportToModule(
       source,
       modulePath,
-      `StoreDevtoolsModule.instrument({ maxAge: ${
-        options.maxAge
-      }, logOnly: environment.production })`,
+      `StoreDevtoolsModule.instrument({ maxAge: ${options.maxAge}, logOnly: environment.production })`,
       modulePath
     );
 
@@ -99,7 +97,7 @@ function addNgRxStoreDevToolsToPackageJson() {
   };
 }
 
-export default function(options: StoreDevtoolsOptions): Rule {
+export default function (options: StoreDevtoolsOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     options.path = getProjectPath(host, options);
 
@@ -114,7 +112,7 @@ export default function(options: StoreDevtoolsOptions): Rule {
     const parsedPath = parseName(options.path, '');
     options.path = parsedPath.path;
 
-    if (options.maxAge! < 0 || options.maxAge === 1) {
+    if (options.maxAge && (options.maxAge < 0 || options.maxAge === 1)) {
       throw new SchematicsException(
         `maxAge should be an integer greater than 1.`
       );

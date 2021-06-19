@@ -1,17 +1,31 @@
 import { compose } from '@ngrx/store';
-import { EffectMetadata } from './models';
+
+import {
+  DEFAULT_EFFECT_CONFIG,
+  EffectConfig,
+  EffectMetadata,
+  EffectPropertyKey,
+} from './models';
 import { getSourceForInstance } from './utils';
 
 const METADATA_KEY = '__@ngrx/effects__';
 
-export function Effect<T>({ dispatch = true } = {}): PropertyDecorator {
-  return function<K extends Extract<keyof T, string>>(
+/**
+ * @deprecated The Effect decorator (`@Effect`) is deprecated in favor for the `createEffect` method.
+ * See the docs for more info {@link https://ngrx.io/guide/migration/v11#the-effect-decorator}
+ */
+export function Effect(config: EffectConfig = {}) {
+  return function <T extends Object, K extends EffectPropertyKey<T>>(
     target: T,
     propertyName: K
   ) {
-    const metadata: EffectMetadata<T> = { propertyName, dispatch };
-    setEffectMetadataEntries<T>(target, [metadata]);
-  } as (target: {}, propertyName: string | symbol) => void;
+    const metadata: EffectMetadata<T> = {
+      ...DEFAULT_EFFECT_CONFIG,
+      ...config, // Overrides any defaults if values are provided
+      propertyName,
+    };
+    addEffectMetadataEntry<T>(target, metadata);
+  };
 }
 
 export function getEffectDecoratorMetadata<T>(
@@ -25,23 +39,38 @@ export function getEffectDecoratorMetadata<T>(
   return effectsDecorators;
 }
 
-function setEffectMetadataEntries<T>(
-  sourceProto: T,
-  entries: EffectMetadata<T>[]
-) {
-  const constructor = sourceProto.constructor;
-  const meta: Array<EffectMetadata<T>> = constructor.hasOwnProperty(
-    METADATA_KEY
-  )
-    ? (constructor as any)[METADATA_KEY]
-    : Object.defineProperty(constructor, METADATA_KEY, { value: [] })[
-        METADATA_KEY
-      ];
-  Array.prototype.push.apply(meta, entries);
+/**
+ * Type guard to detemine whether METADATA_KEY is already present on the Class
+ * constructor
+ */
+function hasMetadataEntries<T extends Object>(
+  sourceProto: T
+): sourceProto is typeof sourceProto & {
+  constructor: typeof sourceProto.constructor & {
+    [METADATA_KEY]: EffectMetadata<T>[];
+  };
+} {
+  return sourceProto.constructor.hasOwnProperty(METADATA_KEY);
 }
 
-function getEffectMetadataEntries<T>(sourceProto: T): EffectMetadata<T>[] {
-  return sourceProto.constructor.hasOwnProperty(METADATA_KEY)
-    ? (sourceProto.constructor as any)[METADATA_KEY]
+/** Add Effect Metadata to the Effect Class constructor under specific key */
+function addEffectMetadataEntry<T extends object>(
+  sourceProto: T,
+  metadata: EffectMetadata<T>
+) {
+  if (hasMetadataEntries(sourceProto)) {
+    sourceProto.constructor[METADATA_KEY].push(metadata);
+  } else {
+    Object.defineProperty(sourceProto.constructor, METADATA_KEY, {
+      value: [metadata],
+    });
+  }
+}
+
+function getEffectMetadataEntries<T extends object>(
+  sourceProto: T
+): EffectMetadata<T>[] {
+  return hasMetadataEntries(sourceProto)
+    ? sourceProto.constructor[METADATA_KEY]
     : [];
 }

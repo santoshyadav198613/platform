@@ -1,12 +1,12 @@
 # Selectors
 
-Selectors are pure functions used for obtaining slices of store state. @ngrx/store provides a few helper functions for optimizing this selection. Selectors provide many features when selecting slices of state.
+Selectors are pure functions used for obtaining slices of store state. @ngrx/store provides a few helper functions for optimizing this selection. Selectors provide many features when selecting slices of state:
 
-- Portable
+- Portability
 - Memoization
 - Composition
-- Testable
-- Type-safe
+- Testability
+- Type Safety
 
 When using the `createSelector` and `createFeatureSelector` functions @ngrx/store keeps track of the latest arguments in which your selector function was invoked. Because selectors are [pure functions](https://en.wikipedia.org/wiki/Pure_function), the last result can be returned when the arguments match without reinvoking your selector function. This can provide performance benefits, particularly with selectors that perform expensive computation. This practice is known as [memoization](https://en.wikipedia.org/wiki/Memoization).
 
@@ -35,7 +35,7 @@ export const selectFeatureCount = createSelector(
 
 The `createSelector` can be used to select some data from the state based on several slices of the same state.
 
-The `createSelector` function can take up to 8 selector function for more complete state selections.
+The `createSelector` function can take up to 8 selector functions for more complete state selections.
 
 For example, imagine you have a `selectedUser` object in the state. You also have an `allBooks` array of book objects.
 
@@ -82,6 +82,12 @@ export const selectVisibleBooks = createSelector(
 
 ### Using selectors with props
 
+<div class="alert is-critical">
+
+Selectors with props are [deprecated](https://github.com/ngrx/platform/issues/2980).
+
+</div>
+
 To select a piece of state based on data that isn't available in the store you can pass `props` to the selector function. These `props` gets passed through every selector and the projector function.
 To do so we must specify these `props` when we use the selector inside our component.
 
@@ -100,11 +106,11 @@ Inside the component we can define the `props`:
 
 <code-example header="app.component.ts">
 ngOnInit() {
-  this.counter = this.store.pipe(select(fromRoot.getCount, { multiply: 2 }))
+  this.counter = this.store.select(fromRoot.getCount, { multiply: 2 })
 }
 </code-example>
 
-Keep in mind that a selector only keeps the previous input arguments in its cache. If you re-use this selector with another multiply factor, the selector would always have to re-evaluate its value. This is because it's receiving both of the multiply factors (e.g. one time `2`, the other time `4`). In order to correctly memoize the selector, wrap the selector inside a factory function to create different instances of the selector.
+Keep in mind that a selector only keeps the previous input arguments in its cache. If you reuse this selector with another multiply factor, the selector would always have to re-evaluate its value. This is because it's receiving both of the multiply factors (e.g. one time `2`, the other time `4`). In order to correctly memoize the selector, wrap the selector inside a factory function to create different instances of the selector.
 
 The following is an example of using multiple counters differentiated by `id`.
 
@@ -120,9 +126,9 @@ The component's selectors are now calling the factory function to create differe
 
 <code-example header="app.component.ts">
 ngOnInit() {
-  this.counter2 = this.store.pipe(select(fromRoot.getCount(), { id: 'counter2', multiply: 2 }));
-  this.counter4 = this.store.pipe(select(fromRoot.getCount(), { id: 'counter4', multiply: 4 }));
-  this.counter6 = this.store.pipe(select(fromRoot.getCount(), { id: 'counter6', multiply: 6 }));
+  this.counter2 = this.store.select(fromRoot.getCount(), { id: 'counter2', multiply: 2 });
+  this.counter4 = this.store.select(fromRoot.getCount(), { id: 'counter4', multiply: 4 });
+  this.counter6 = this.store.select(fromRoot.getCount(), { id: 'counter6', multiply: 6 });
 }
 </code-example>
 
@@ -135,6 +141,8 @@ The `createFeatureSelector` is a convenience method for returning a top level fe
 <code-example header="index.ts">
 import { createSelector, createFeatureSelector } from '@ngrx/store';
 
+export const featureKey = 'feature';
+
 export interface FeatureState {
   counter: number;
 }
@@ -143,7 +151,7 @@ export interface AppState {
   feature: FeatureState;
 }
 
-export const selectFeature = createFeatureSelector&lt;AppState, FeatureState&gt;('feature');
+export const selectFeature = createFeatureSelector&lt;AppState, FeatureState&gt;(featureKey);
 
 export const selectFeatureCount = createSelector(
   selectFeature,
@@ -151,10 +159,10 @@ export const selectFeatureCount = createSelector(
 );
 </code-example>
 
-The following selector below would not compile because `foo` is not a feature slice of `AppState`.
+The following selector below would not compile because `fooFeatureKey` (`'foo'`) is not a feature slice of `AppState`.
 
 <code-example header="index.ts">
-export const selectFeature = createFeatureSelector&lt;AppState, FeatureState&gt;('foo');
+export const selectFeature = createFeatureSelector&lt;AppState, FeatureState&gt;(fooFeatureKey);
 </code-example>
 
 ## Resetting Memoized Selectors
@@ -238,11 +246,31 @@ selectTotal.release();
  */
 </code-example>
 
+## Using Store Without Type Generic
+
+When injecting `Store` into components and other injectables, it is possible to omit the generic type. If injected without the generic, the default generic is applied as follows `Store<T = object>`.
+
+The most common way to select information from the store is to use a selector function defined with `createSelector`. When doing so, TypeScript is able to automatically infer types from the selector function, therefore reducing the need to define the type in the store generic.
+
+<div class="alert is-important">
+It is important to continue to provide a Store type generic if you are using the string version of selectors as types cannot be inferred automatically in those instances.
+</div>
+
+The follow example demonstrates the use of Store without providing a generic:
+
+<code-example header="app.component.ts">
+export class AppComponent {
+  counter$ = this.store.select(fromCounter.selectCounter);
+
+  constructor(private readonly store: Store) {}
+}
+</code-example>
+
 ## Advanced Usage
 
 Selectors empower you to compose a [read model for your application state](https://docs.microsoft.com/en-us/azure/architecture/patterns/cqrs#solution).
 In terms of the CQRS architectural pattern, NgRx separates the read model (selectors) from the write model (reducers).
-An advanced technique is to combine selectors with [RxJS pipeable operators](https://github.com/ReactiveX/rxjs/blob/master/doc/pipeable-operators.md).
+An advanced technique is to combine selectors with [RxJS pipeable operators](https://rxjs.dev/guide/v6/pipeable-operators).
 
 This section covers some basics of how selectors compare to pipeable operators and demonstrates how `createSelector` and `scan` are utilized to display a history of state transitions.
 
@@ -265,7 +293,7 @@ store
   .subscribe(/* .. */);
 </code-example>
 
-The above can be further re-written to use the `select()` utility function from NgRx:
+The above can be further rewritten to use the `select()` utility function from NgRx:
 
 <code-example header="app.component.ts">
 import { select } from '@ngrx/store';
@@ -281,7 +309,7 @@ store
 
 #### Solution: Extracting a pipeable operator
 
-To make the `select()` and `filter()` behaviour a re-usable piece of code, we extract a [pipeable operator](https://github.com/ReactiveX/rxjs/blob/master/doc/pipeable-operators.md) using the RxJS `pipe()` utility function:
+To make the `select()` and `filter()` behaviour a reusable piece of code, we extract a [pipeable operator](https://github.com/ReactiveX/rxjs/blob/master/doc/pipeable-operators.md) using the RxJS `pipe()` utility function:
 
 <code-example header="app.component.ts">
 import { select } from '@ngrx/store';
@@ -331,7 +359,7 @@ export const selectLastStateTransitions = (count: number) => {
     select(selectProjectedValues),
     // Combines the last `count` state values in array
     scan((acc, curr) => {
-      return [ curr, acc[0], acc[1] ].filter(val => val !== undefined);
+      return [ curr, ...acc ].filter((val, index) => index < count && val !== undefined)
     }, [] as {foo: number; bar: string}[]) // XX: Explicit type hint for the array.
                                           // Equivalent to what is emitted by the selector
   );
@@ -344,5 +372,3 @@ Finally, the component will subscribe to the store, telling the number of state 
 // Subscribe to the store using the custom pipeable operator
 store.pipe(selectLastStateTransitions(3)).subscribe(/* .. */);
 </code-example>
-
-See the [advanced example live in action in a Stackblitz](https://stackblitz.com/edit/angular-ngrx-effects-1rj88y?file=app%2Fstore%2Ffoo.ts)

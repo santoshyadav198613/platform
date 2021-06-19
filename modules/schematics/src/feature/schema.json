@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "SchematicsNgRxFeature",
+  "$id": "SchematicsNgRxFeature",
   "title": "NgRx Feature State Options Schema",
   "type": "object",
   "properties": {
@@ -21,7 +21,8 @@
       "$default": {
         "$source": "argv",
         "index": 0
-      }
+      },
+      "x-prompt": "What should be the name of the feature?"
     },
     "flat": {
       "type": "boolean",
@@ -33,10 +34,10 @@
       "description": "Specifies the declaring module.",
       "aliases": ["m"]
     },
-    "spec": {
+    "skipTests": {
       "type": "boolean",
-      "default": true,
-      "description": "Specifies if a spec file is generated."
+      "default": false,
+      "description": "When true, does not create test files."
     },
     "reducers": {
       "type": "string",
@@ -46,23 +47,22 @@
     "group": {
       "type": "boolean",
       "default": false,
-      "description":
-        "Group actions, reducers and effects within relative subfolders",
+      "description": "Group actions, reducers and effects within relative subfolders",
       "aliases": ["g"]
     },
     "api": {
       "type": "boolean",
       "default": false,
-      "description":
-        "Specifies if api success and failure actions, reducer, and effects should be generated as part of this feature.",
-      "aliases": ["a"]
+      "description": "Specifies if api success and failure actions, reducer, and effects should be generated as part of this feature.",
+      "aliases": ["a"],
+      "x-prompt": "Should we generate and wire success and failure actions?"
     },
     "creators": {
       "type": "boolean",
-      "default": false,
-      "description":
-        "Specifies if the actions, reducers, and effects should be created using creator functions",
-      "aliases": ["c"]
+      "default": true,
+      "description": "Specifies if the actions, reducers, and effects should be created using creator functions",
+      "aliases": ["c"],
+      "x-prompt": "Do you want to use the create functions?"
     }
   },
   "required": []

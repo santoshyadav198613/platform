@@ -22,6 +22,13 @@
       "description": "Add side effect class"
     },
 
+    "create-effect-migration": {
+      "aliases": ["cefm"],
+      "factory": "./src/create-effect-migration",
+      "schema": "./src/create-effect-migration/schema.json",
+      "description": "Migrated usages of @Effect() to createEffect()"
+    },
+
     "entity": {
       "aliases": ["en"],
       "factory": "./src/entity",
@@ -34,6 +41,13 @@
       "factory": "./src/feature",
       "schema": "./src/feature/schema.json",
       "description": "Add feature state"
+    },
+
+    "ngrx-push-migration": {
+      "aliases": ["ngrxpush"],
+      "factory": "./src/ngrx-push-migration",
+      "schema": "./src/ngrx-push-migration/schema.json",
+      "description": "Migration to replace the `async` pipe with `ngrxPush`"
     },
 
     "reducer": {
@@ -49,12 +63,31 @@
       "schema": "./src/store/schema.json",
       "description": "Adds initial setup for state management"
     },
+    "selector": {
+      "aliases": ["se"],
+      "factory": "./src/selector",
+      "schema": "./src/selector/schema.json",
+      "description": "Add selectors"
+    },
+
+    "data": {
+      "aliases": ["dt"],
+      "factory": "./src/data",
+      "schema": "./src/data/schema.json",
+      "description": "Adds a data entity service"
+    },
 
     "ng-add": {
       "aliases": ["init"],
       "factory": "./src/ng-add",
       "schema": "./src/ng-add/schema.json",
       "description": "Installs the NgRx schematics package"
+    },
+    "component-store": {
+      "aliases": ["cs"],
+      "factory": "./src/component-store",
+      "schema": "./src/component-store/schema.json",
+      "description": "Add component store."
     }
   }
 }

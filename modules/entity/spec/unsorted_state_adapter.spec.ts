@@ -68,10 +68,31 @@ describe('Unsorted State Adapter', () => {
     });
   });
 
-  it('should let you add all entities to the state', () => {
+  it('should let you set many entities in the state', () => {
+    const firstChange = { title: 'First Change' };
+    const withMany = adapter.setAll([TheGreatGatsby], state);
+
+    const withUpserts = adapter.setMany(
+      [{ ...TheGreatGatsby, ...firstChange }, AClockworkOrange],
+      withMany
+    );
+
+    expect(withUpserts).toEqual({
+      ids: [TheGreatGatsby.id, AClockworkOrange.id],
+      entities: {
+        [TheGreatGatsby.id]: {
+          ...TheGreatGatsby,
+          ...firstChange,
+        },
+        [AClockworkOrange.id]: AClockworkOrange,
+      },
+    });
+  });
+
+  it('should remove existing and add new ones on setAll', () => {
     const withOneEntity = adapter.addOne(TheGreatGatsby, state);
 
-    const withAll = adapter.addAll(
+    const withAll = adapter.setAll(
       [AClockworkOrange, AnimalFarm],
       withOneEntity
     );
@@ -97,7 +118,7 @@ describe('Unsorted State Adapter', () => {
   });
 
   it('should let you remove many entities by id from the state', () => {
-    const withAll = adapter.addAll(
+    const withAll = adapter.setAll(
       [TheGreatGatsby, AClockworkOrange, AnimalFarm],
       state
     );
@@ -116,12 +137,15 @@ describe('Unsorted State Adapter', () => {
   });
 
   it('should let you remove many entities by a predicate from the state', () => {
-    const withAll = adapter.addAll(
+    const withAll = adapter.setAll(
       [TheGreatGatsby, AClockworkOrange, AnimalFarm],
       state
     );
 
-    const withoutMany = adapter.removeMany(p => p.id.startsWith('a'), withAll);
+    const withoutMany = adapter.removeMany(
+      (p) => p.id.startsWith('a'),
+      withAll
+    );
 
     expect(withoutMany).toEqual({
       ids: [TheGreatGatsby.id],
@@ -132,7 +156,7 @@ describe('Unsorted State Adapter', () => {
   });
 
   it('should let you remove all entities from the state', () => {
-    const withAll = adapter.addAll(
+    const withAll = adapter.setAll(
       [TheGreatGatsby, AClockworkOrange, AnimalFarm],
       state
     );
@@ -221,7 +245,7 @@ describe('Unsorted State Adapter', () => {
   it('should let you update many entities by id in the state', () => {
     const firstChange = { title: 'First Change' };
     const secondChange = { title: 'Second Change' };
-    const withMany = adapter.addAll([TheGreatGatsby, AClockworkOrange], state);
+    const withMany = adapter.setAll([TheGreatGatsby, AClockworkOrange], state);
 
     const withUpdates = adapter.updateMany(
       [
@@ -250,18 +274,18 @@ describe('Unsorted State Adapter', () => {
     const firstChange = { ...TheGreatGatsby, title: 'First change' };
     const secondChange = { ...AClockworkOrange, title: 'Second change' };
 
-    const withMany = adapter.addAll(
+    const withMany = adapter.setAll(
       [TheGreatGatsby, AClockworkOrange, AnimalFarm],
       state
     );
 
     const withUpdates = adapter.map(
-      book =>
+      (book) =>
         book.title === TheGreatGatsby.title
           ? firstChange
           : book.title === AClockworkOrange.title
-            ? secondChange
-            : book,
+          ? secondChange
+          : book,
       withMany
     );
 
@@ -277,6 +301,29 @@ describe('Unsorted State Adapter', () => {
           ...secondChange,
         },
         [AnimalFarm.id]: AnimalFarm,
+      },
+    });
+  });
+
+  it('should let you map over one entity by id in the state', () => {
+    const withMany = adapter.setAll([TheGreatGatsby, AClockworkOrange], state);
+
+    const withUpdates = adapter.mapOne(
+      {
+        id: TheGreatGatsby.id,
+        map: (entity) => ({ ...entity, title: 'Updated ' + entity.title }),
+      },
+      withMany
+    );
+
+    expect(withUpdates).toEqual({
+      ids: [TheGreatGatsby.id, AClockworkOrange.id],
+      entities: {
+        [AClockworkOrange.id]: AClockworkOrange,
+        [TheGreatGatsby.id]: {
+          ...TheGreatGatsby,
+          title: 'Updated ' + TheGreatGatsby.title,
+        },
       },
     });
   });
@@ -312,7 +359,7 @@ describe('Unsorted State Adapter', () => {
 
   it('should let you upsert many entities in the state', () => {
     const firstChange = { title: 'First Change' };
-    const withMany = adapter.addAll([TheGreatGatsby], state);
+    const withMany = adapter.setAll([TheGreatGatsby], state);
 
     const withUpserts = adapter.upsertMany(
       [{ ...TheGreatGatsby, ...firstChange }, AClockworkOrange],
@@ -327,6 +374,33 @@ describe('Unsorted State Adapter', () => {
           ...firstChange,
         },
         [AClockworkOrange.id]: AClockworkOrange,
+      },
+    });
+  });
+
+  it('should let you add one entity to the state with setOne()', () => {
+    const withOneEntity = adapter.setOne(TheGreatGatsby, state);
+    expect(withOneEntity).toEqual({
+      ids: [TheGreatGatsby.id],
+      entities: {
+        [TheGreatGatsby.id]: TheGreatGatsby,
+      },
+    });
+  });
+
+  it('should let you replace an entity in the state with setOne()', () => {
+    const withOne = adapter.addOne(TheGreatGatsby, state);
+    const updatedBook = {
+      id: TheGreatGatsby.id,
+      title: 'A New Hope',
+      /* description property is not provided */
+    };
+
+    const withUpdates = adapter.setOne(updatedBook, withOne);
+    expect(withUpdates).toEqual({
+      ids: [TheGreatGatsby.id],
+      entities: {
+        [TheGreatGatsby.id]: updatedBook,
       },
     });
   });

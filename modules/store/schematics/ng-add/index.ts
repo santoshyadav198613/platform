@@ -1,3 +1,5 @@
+import * as ts from 'typescript';
+import { Path, dirname } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -8,10 +10,10 @@ import {
   branchAndMerge,
   chain,
   mergeWith,
-  template,
   url,
   noop,
   move,
+  filter,
 } from '@angular-devkit/schematics';
 import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 import {
@@ -25,9 +27,7 @@ import {
   addPackageToPackageJson,
   platformVersion,
   parseName,
-} from '@ngrx/store/schematics-core';
-import { Path, dirname } from '@angular-devkit/core';
-import * as ts from 'typescript';
+} from '../../schematics-core';
 import { Schema as RootStoreOptions } from './schema';
 
 function addImportToNgModule(options: RootStoreOptions): Rule {
@@ -55,20 +55,40 @@ function addImportToNgModule(options: RootStoreOptions): Rule {
       true
     );
 
+    const storeModuleReducers = options.minimal ? `{}` : `reducers`;
+
+    const storeModuleConfig = options.minimal
+      ? `{}`
+      : `{
+      metaReducers
+    }`;
+    const storeModuleSetup = `StoreModule.forRoot(${storeModuleReducers}, ${storeModuleConfig})`;
+
     const statePath = `/${options.path}/${options.statePath}`;
     const relativePath = buildRelativePath(modulePath, statePath);
     const [storeNgModuleImport] = addImportToModule(
       source,
       modulePath,
-      'StoreModule.forRoot(reducers, { metaReducers })',
+      storeModuleSetup,
       relativePath
     );
 
-    const changes = [
+    let changes = [
       insertImport(source, modulePath, 'StoreModule', '@ngrx/store'),
-      insertImport(source, modulePath, 'reducers, metaReducers', relativePath),
       storeNgModuleImport,
     ];
+
+    if (!options.minimal) {
+      changes = changes.concat([
+        insertImport(
+          source,
+          modulePath,
+          'reducers, metaReducers',
+          relativePath
+        ),
+      ]);
+    }
+
     const recorder = host.beginUpdate(modulePath);
 
     for (const change of changes) {
@@ -95,7 +115,67 @@ function addNgRxStoreToPackageJson() {
   };
 }
 
-export default function(options: RootStoreOptions): Rule {
+function addNgRxESLintPlugin() {
+  return (host: Tree, context: SchematicContext) => {
+    const eslintConfigPath = '.eslintrc.json';
+    const docs =
+      'https://github.com/timdeschryver/eslint-plugin-ngrx/#eslint-plugin-ngrx';
+
+    const eslint = host.read(eslintConfigPath)?.toString('utf-8');
+    if (!eslint) {
+      return host;
+    }
+
+    addPackageToPackageJson(
+      host,
+      'devDependencies',
+      'eslint-plugin-ngrx',
+      '^1.0.0'
+    );
+    context.addTask(new NodePackageInstallTask());
+
+    try {
+      const json = JSON.parse(eslint);
+      if (json.overrides) {
+        json.overrides
+          .filter((override: { files?: string[] }) =>
+            override.files?.some((file: string) => file.endsWith('*.ts'))
+          )
+          .forEach(configureESLintPlugin);
+      } else {
+        configureESLintPlugin(json);
+      }
+
+      host.overwrite(eslintConfigPath, JSON.stringify(json, null, 2));
+
+      context.logger.info(`
+The NgRx ESLint Plugin is installed and configured with the recommended config.
+
+If you want to change the configuration, please see ${docs}.
+`);
+      return host;
+    } catch (err) {
+      context.logger.warn(`
+Something went wrong while adding the NgRx ESLint Plugin.
+The NgRx ESLint Plugin is installed but not configured.
+
+Please see ${docs} to configure the NgRx ESLint Plugin.
+
+Details:
+${err.message}
+`);
+    }
+
+    return host;
+  };
+}
+
+function configureESLintPlugin(json: any): void {
+  json.plugins = [...(json.plugins || []), 'ngrx'];
+  json.extends = [...(json.extends || []), 'plugin:ngrx/recommended'];
+}
+
+export default function (options: RootStoreOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     options.path = getProjectPath(host, options);
 
@@ -122,6 +202,7 @@ export default function(options: RootStoreOptions): Rule {
     }
 
     const templateSource = apply(url('./files'), [
+      filter(() => (options.minimal ? false : true)),
       applyTemplates({
         ...stringUtils,
         ...options,
@@ -135,6 +216,7 @@ export default function(options: RootStoreOptions): Rule {
         chain([addImportToNgModule(options), mergeWith(templateSource)])
       ),
       options && options.skipPackageJson ? noop() : addNgRxStoreToPackageJson(),
+      options && options.skipESLintPlugin ? noop() : addNgRxESLintPlugin(),
     ])(host, context);
   };
 }

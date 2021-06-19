@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
+
 import { cold } from 'jasmine-marbles';
-import { GoogleBooksService } from '@example-app/core/services/google-books.service';
+
+import { GoogleBooksService } from './google-books.service';
 
 describe('Service: GoogleBooks', () => {
   let service: GoogleBooksService;
@@ -12,8 +14,8 @@ describe('Service: GoogleBooks', () => {
       providers: [{ provide: HttpClient, useValue: { get: jest.fn() } }],
     });
 
-    service = TestBed.get(GoogleBooksService);
-    http = TestBed.get(HttpClient);
+    service = TestBed.inject(GoogleBooksService);
+    http = TestBed.inject(HttpClient);
   });
 
   const data = {

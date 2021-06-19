@@ -55,6 +55,12 @@ type ActionExtractor<
  * like `actions.ofType<AdditionAction>('add')`.
  */
 export function ofType<
+  AC extends ActionCreator<string, Creator>[],
+  U extends Action = Action,
+  V = ReturnType<AC[number]>
+>(...allowedTypes: AC): OperatorFunction<U, V>;
+
+export function ofType<
   E extends Extract<U, { type: T1 }>,
   AC extends ActionCreator<string, Creator>,
   T1 extends string | AC,
@@ -114,7 +120,7 @@ export function ofType(
   ...allowedTypes: Array<string | ActionCreator<string, Creator>>
 ): OperatorFunction<Action, Action> {
   return filter((action: Action) =>
-    allowedTypes.some(typeOrActionCreator => {
+    allowedTypes.some((typeOrActionCreator) => {
       if (typeof typeOrActionCreator === 'string') {
         // Comparing the string to type
         return typeOrActionCreator === action.type;

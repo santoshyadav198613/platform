@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Actions, ofType, createEffect } from '@ngrx/effects';
+
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { asyncScheduler, EMPTY as empty, of } from 'rxjs';
 import {
   catchError,
@@ -10,12 +11,12 @@ import {
   takeUntil,
 } from 'rxjs/operators';
 
-import { GoogleBooksService } from '@example-app/core/services/google-books.service';
+import { Book } from '@example-app/books/models';
 import {
   BooksApiActions,
   FindBookPageActions,
 } from '@example-app/books/actions';
-import { Book } from '@example-app/books/models/book';
+import { GoogleBooksService } from '@example-app/core/services';
 
 /**
  * Effects offer a way to isolate and easily test side-effects within your
@@ -48,8 +49,8 @@ export class BookEffects {
           return this.googleBooks.searchBooks(query).pipe(
             takeUntil(nextSearch$),
             map((books: Book[]) => BooksApiActions.searchSuccess({ books })),
-            catchError(err =>
-              of(BooksApiActions.searchFailure({ errorMsg: err }))
+            catchError((err) =>
+              of(BooksApiActions.searchFailure({ errorMsg: err.message }))
             )
           );
         })

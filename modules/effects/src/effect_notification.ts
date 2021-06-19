@@ -4,27 +4,13 @@ import { Notification, Observable } from 'rxjs';
 
 export interface EffectNotification {
   effect: Observable<any> | (() => Observable<any>);
-  propertyName: string;
+  propertyName: PropertyKey;
   sourceName: string;
   sourceInstance: any;
   notification: Notification<Action | null | undefined>;
 }
 
-export function verifyOutput(
-  output: EffectNotification,
-  reporter: ErrorHandler
-) {
-  reportErrorThrown(output, reporter);
-  reportInvalidActions(output, reporter);
-}
-
-function reportErrorThrown(output: EffectNotification, reporter: ErrorHandler) {
-  if (output.notification.kind === 'E') {
-    reporter.handleError(output.notification.error);
-  }
-}
-
-function reportInvalidActions(
+export function reportInvalidActions(
   output: EffectNotification,
   reporter: ErrorHandler
 ) {
@@ -45,7 +31,12 @@ function reportInvalidActions(
 }
 
 function isAction(action: any): action is Action {
-  return action && action.type && typeof action.type === 'string';
+  return (
+    typeof action !== 'function' &&
+    action &&
+    action.type &&
+    typeof action.type === 'string'
+  );
 }
 
 function getEffectName({
@@ -55,7 +46,7 @@ function getEffectName({
 }: EffectNotification) {
   const isMethod = typeof sourceInstance[propertyName] === 'function';
 
-  return `"${sourceName}.${propertyName}${isMethod ? '()' : ''}"`;
+  return `"${sourceName}.${String(propertyName)}${isMethod ? '()' : ''}"`;
 }
 
 function stringify(action: Action | null | undefined) {

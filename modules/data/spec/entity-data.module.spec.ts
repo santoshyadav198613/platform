@@ -6,13 +6,13 @@ import {
   Store,
   StoreModule,
 } from '@ngrx/store';
-import { Actions, Effect, EffectsModule } from '@ngrx/effects';
+import { Actions, EffectsModule, createEffect } from '@ngrx/effects';
 
 // Not using marble testing
 import { TestBed } from '@angular/core/testing';
 
-import { Observable, of, Subject } from 'rxjs';
-import { map, skip, tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map, skip } from 'rxjs/operators';
 
 import {
   EntityCache,
@@ -35,11 +35,12 @@ const EC_METAREDUCER_TOKEN = new InjectionToken<
 
 @Injectable()
 class TestEntityEffects {
-  @Effect()
-  test$: Observable<Action> = this.actions.pipe(
-    // tap(action => console.log('test$ effect', action)),
-    ofEntityOp(persistOps),
-    map(this.testHook)
+  test$: Observable<Action> = createEffect(() =>
+    this.actions.pipe(
+      // tap(action => console.log('test$ effect', action)),
+      ofEntityOp(persistOps),
+      map(this.testHook)
+    )
   );
 
   testHook(action: EntityAction) {
@@ -54,14 +55,14 @@ class TestEntityEffects {
 }
 
 class Hero {
-  id: number;
-  name: string;
+  id!: number;
+  name!: string;
   power?: string;
 }
 
 class Villain {
-  id: string;
-  name: string;
+  id!: string;
+  name!: string;
 }
 
 const entityMetadata = {
@@ -95,10 +96,10 @@ describe('EntityDataModule', () => {
         ],
       });
 
-      actions$ = TestBed.get(Actions);
-      store = TestBed.get(Store);
+      actions$ = TestBed.inject(Actions);
+      store = TestBed.inject(Store);
 
-      testEffects = TestBed.get(EntityEffects);
+      testEffects = TestBed.inject<unknown>(EntityEffects) as TestEntityEffects;
       spyOn(testEffects, 'testHook').and.callThrough();
     });
 
@@ -111,11 +112,11 @@ describe('EntityDataModule', () => {
           // tap(act => console.log('test action', act)),
           skip(1) // Skip QUERY_ALL
         )
-        .subscribe(act => actions.push(act));
+        .subscribe((act) => actions.push(act));
 
       const action = entityActionFactory.create('Hero', EntityOp.QUERY_ALL);
       store.dispatch(action);
-      expect(actions.length).toBe(1, 'expect one effect action');
+      expect(actions.length).toBe(1);
       expect(actions[0].type).toBe('test-action');
     });
 
@@ -123,7 +124,7 @@ describe('EntityDataModule', () => {
       const actions: Action[] = [];
 
       // listen for actions after the next dispatched action
-      actions$.pipe(skip(1)).subscribe(act => actions.push(act));
+      actions$.pipe(skip(1)).subscribe((act) => actions.push(act));
 
       store.dispatch({ type: 'not-an-entity-action' });
       expect(actions.length).toBe(0);
@@ -172,21 +173,18 @@ describe('EntityDataModule', () => {
         ],
       });
 
-      store = TestBed.get(Store);
-      cacheSelector$ = <any>store.select(state => state.entityCache);
-      eaFactory = TestBed.get(EntityActionFactory);
+      store = TestBed.inject(Store);
+      cacheSelector$ = <any>store.select((state) => state.entityCache);
+      eaFactory = TestBed.inject(EntityActionFactory);
     });
 
     it('should log an ordinary entity action', () => {
       const action = eaFactory.create('Hero', EntityOp.SET_LOADING);
       store.dispatch(action);
-      expect(metaReducerLog.join('|')).toContain(
-        EntityOp.SET_LOADING,
-        'logged entity action'
-      );
+      expect(metaReducerLog.join('|')).toContain(EntityOp.SET_LOADING);
     });
 
-    it('should respond to action handled by custom EntityCacheMetaReducer', () => {
+    it('should respond to action handled by custom EntityCacheMetaReducer', (done) => {
       const data = {
         Hero: [
           { id: 2, name: 'B', power: 'Fast' },
@@ -199,20 +197,12 @@ describe('EntityDataModule', () => {
         payload: data,
       };
       store.dispatch(action);
-      cacheSelector$.subscribe(cache => {
+      cacheSelector$.subscribe((cache) => {
         try {
-          expect(cache.Hero.entities[1]).toEqual(
-            data.Hero[1],
-            'has expected hero'
-          );
-          expect(cache.Villain.entities[30]).toEqual(
-            data.Villain[0],
-            'has expected hero'
-          );
-          expect(metaReducerLog.join('|')).toContain(
-            TEST_ACTION,
-            'logged test action'
-          );
+          expect(cache.Hero.entities[1]).toEqual(data.Hero[1]);
+          expect(cache.Villain.entities[30]).toEqual(data.Villain[0]);
+          expect(metaReducerLog.join('|')).toContain(TEST_ACTION);
+          done();
         } catch (error) {
           fail(error);
         }
@@ -251,14 +241,11 @@ function entityCacheMetaReducerFactory(
   ) {
     return {
       ...collectionCreator.create<T>(entityName),
-      ids: data.map(e => e.id),
-      entities: data.reduce(
-        (acc, e) => {
-          acc[e.id] = e;
-          return acc;
-        },
-        {} as any
-      ),
+      ids: data.map((e) => e.id),
+      entities: data.reduce((acc, e) => {
+        acc[e.id] = e;
+        return acc;
+      }, {} as any),
     } as EntityCollection<T>;
   }
 }

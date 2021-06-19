@@ -1,3 +1,4 @@
+import * as ngCore from '@angular/core';
 import { cold } from 'jasmine-marbles';
 import {
   createSelector,
@@ -8,6 +9,7 @@ import {
   MemoizedProjection,
 } from '@ngrx/store';
 import { map, distinctUntilChanged } from 'rxjs/operators';
+import { setNgrxMockEnvironment } from '../src';
 
 describe('Selectors', () => {
   let countOne: number;
@@ -40,9 +42,11 @@ describe('Selectors', () => {
     it('should deliver the value of selectors to the projection function', () => {
       const projectFn = jasmine.createSpy('projectionFn');
 
-      const selector = createSelector(incrementOne, incrementTwo, projectFn)(
-        {}
-      );
+      const selector = createSelector(
+        incrementOne,
+        incrementTwo,
+        projectFn
+      )({});
 
       expect(projectFn).toHaveBeenCalledWith(countOne, countTwo);
     });
@@ -112,6 +116,32 @@ describe('Selectors', () => {
       expect(projectFn).toHaveBeenCalledTimes(2);
     });
 
+    it('should not memoize last successful projection result in case of error', () => {
+      const firstState = { ok: true };
+      const secondState = { ok: false };
+      const fail = () => {
+        throw new Error();
+      };
+      const projectorFn = jasmine
+        .createSpy('projectorFn', (s: any) => (s.ok ? s.ok : fail()))
+        .and.callThrough();
+      const selectorFn = jasmine
+        .createSpy(
+          'selectorFn',
+          createSelector((state) => state, projectorFn)
+        )
+        .and.callThrough();
+
+      selectorFn(firstState);
+
+      expect(() => selectorFn(secondState)).toThrow(new Error());
+      expect(() => selectorFn(secondState)).toThrow(new Error());
+
+      selectorFn(firstState);
+      expect(selectorFn).toHaveBeenCalledTimes(4);
+      expect(projectorFn).toHaveBeenCalledTimes(3);
+    });
+
     it('should allow you to release memoized arguments', () => {
       const state = { first: 'state' };
       const projectFn = jasmine.createSpy('projectionFn');
@@ -127,9 +157,9 @@ describe('Selectors', () => {
     });
 
     it('should recursively release ancestor selectors', () => {
-      const grandparent = createSelector(incrementOne, a => a);
-      const parent = createSelector(grandparent, a => a);
-      const child = createSelector(parent, a => a);
+      const grandparent = createSelector(incrementOne, (a) => a);
+      const parent = createSelector(grandparent, (a) => a);
+      const child = createSelector(parent, (a) => a);
       spyOn(grandparent, 'release').and.callThrough();
       spyOn(parent, 'release').and.callThrough();
 
@@ -245,9 +275,10 @@ describe('Selectors', () => {
   describe('createSelector with arrays', () => {
     it('should deliver the value of selectors to the projection function', () => {
       const projectFn = jasmine.createSpy('projectionFn');
-      const selector = createSelector([incrementOne, incrementTwo], projectFn)(
-        {}
-      );
+      const selector = createSelector(
+        [incrementOne, incrementTwo],
+        projectFn
+      )({});
 
       expect(projectFn).toHaveBeenCalledWith(countOne, countTwo);
     });
@@ -316,9 +347,9 @@ describe('Selectors', () => {
     });
 
     it('should recursively release ancestor selectors', () => {
-      const grandparent = createSelector([incrementOne], a => a);
-      const parent = createSelector([grandparent], a => a);
-      const child = createSelector([parent], a => a);
+      const grandparent = createSelector([incrementOne], (a) => a);
+      const parent = createSelector([grandparent], (a) => a);
+      const child = createSelector([parent], (a) => a);
       spyOn(grandparent, 'release').and.callThrough();
       spyOn(parent, 'release').and.callThrough();
 
@@ -431,11 +462,13 @@ describe('Selectors', () => {
   });
 
   describe('createFeatureSelector', () => {
-    let featureName = '@ngrx/router-store';
+    const featureName = 'featureA';
     let featureSelector: (state: any) => number;
+    let warnSpy: jasmine.Spy;
 
     beforeEach(() => {
       featureSelector = createFeatureSelector<number>(featureName);
+      warnSpy = spyOn(console, 'warn');
     });
 
     it('should memoize the result', () => {
@@ -455,6 +488,61 @@ describe('Selectors', () => {
       );
 
       expect(featureState$).toBeObservable(expected$);
+    });
+
+    describe('Warning', () => {
+      describe('should not log when: ', () => {
+        it('the feature does exist', () => {
+          spyOn(ngCore, 'isDevMode').and.returnValue(true);
+          const selector = createFeatureSelector('featureA');
+
+          selector({ featureA: {} });
+
+          expect(warnSpy).not.toHaveBeenCalled();
+        });
+
+        it('the feature key exist but is falsy', () => {
+          spyOn(ngCore, 'isDevMode').and.returnValue(true);
+          const selector = createFeatureSelector('featureB');
+
+          selector({ featureA: {}, featureB: undefined });
+
+          expect(warnSpy).not.toHaveBeenCalled();
+        });
+
+        it('not in development mode', () => {
+          spyOn(ngCore, 'isDevMode').and.returnValue(false);
+          const selector = createFeatureSelector('featureB');
+
+          selector({ featureA: {} });
+
+          expect(warnSpy).not.toHaveBeenCalled();
+        });
+      });
+
+      describe('warning will ', () => {
+        it('be logged when not in mock environment', () => {
+          spyOn(ngCore, 'isDevMode').and.returnValue(true);
+          const selector = createFeatureSelector('featureB');
+
+          selector({ featureA: {} });
+
+          expect(warnSpy).toHaveBeenCalled();
+          expect(warnSpy.calls.mostRecent().args[0]).toMatch(
+            /The feature name "featureB" does not exist/
+          );
+        });
+
+        it('not be logged when in mock environment', () => {
+          setNgrxMockEnvironment(true);
+          const selector = createFeatureSelector('featureB');
+
+          selector({ featureA: {} });
+
+          expect(warnSpy).not.toHaveBeenCalled();
+          setNgrxMockEnvironment(false);
+        });
+      });
     });
   });
 
@@ -520,7 +608,7 @@ describe('Selectors', () => {
     // on their content.
     function isResultEqual(a: any, b: any) {
       if (a instanceof Array) {
-        return a.length === b.length && a.every(fromA => b.includes(fromA));
+        return a.length === b.length && a.every((fromA) => b.includes(fromA));
       }
       // Default comparison
       return a === b;
@@ -530,7 +618,7 @@ describe('Selectors', () => {
       projectionFnSpy = jasmine
         .createSpy('projectionFn')
         .and.callFake((arr: string[], filter: { by: string }) =>
-          arr.filter(item => item.startsWith(filter.by))
+          arr.filter((item) => item.startsWith(filter.by))
         );
 
       arrayMemoizer = resultMemoize(projectionFnSpy, isResultEqual);

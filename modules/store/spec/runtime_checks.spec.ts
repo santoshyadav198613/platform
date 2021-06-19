@@ -1,42 +1,21 @@
 import * as ngCore from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { Store, StoreModule, META_REDUCERS } from '..';
+import { TestBed, fakeAsync, flush } from '@angular/core/testing';
+import { Store, StoreModule, META_REDUCERS, createAction } from '..';
 import { createActiveRuntimeChecks } from '../src/runtime_checks';
-import { RuntimeChecks } from '../src/models';
+import { RuntimeChecks, Action } from '../src/models';
+import { resetRegisteredActionTypes } from '../src/globals';
 
 describe('Runtime checks:', () => {
   describe('createActiveRuntimeChecks:', () => {
-    it('should disable all checks by default', () => {
+    it('should enable immutability checks by default', () => {
       expect(createActiveRuntimeChecks()).toEqual({
         strictStateSerializability: false,
         strictActionSerializability: false,
-        strictImmutability: false,
+        strictActionImmutability: true,
+        strictStateImmutability: true,
+        strictActionWithinNgZone: false,
+        strictActionTypeUniqueness: false,
       });
-    });
-
-    it('should log a warning in dev mode when no configuration is provided', () => {
-      const spy = spyOn(console, 'warn');
-
-      createActiveRuntimeChecks();
-
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it('should not log a warning in dev mode when configuration is provided', () => {
-      const spy = spyOn(console, 'warn');
-
-      createActiveRuntimeChecks({});
-
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('should not log a warning when not dev mode when no configuration is provided', () => {
-      spyOn(ngCore, 'isDevMode').and.returnValue(false);
-      const spy = spyOn(console, 'warn');
-
-      createActiveRuntimeChecks();
-
-      expect(spy).not.toHaveBeenCalled();
     });
 
     it('should allow the user to override the config', () => {
@@ -44,22 +23,51 @@ describe('Runtime checks:', () => {
         createActiveRuntimeChecks({
           strictStateSerializability: true,
           strictActionSerializability: true,
-          strictImmutability: true,
+          strictActionImmutability: false,
+          strictStateImmutability: false,
+          strictActionWithinNgZone: true,
+          strictActionTypeUniqueness: true,
         })
       ).toEqual({
         strictStateSerializability: true,
         strictActionSerializability: true,
-        strictImmutability: true,
+        strictActionImmutability: false,
+        strictStateImmutability: false,
+        strictActionWithinNgZone: true,
+        strictActionTypeUniqueness: true,
       });
     });
 
-    it('should disable runtime checks in production', () => {
+    it('should disable runtime checks in production by default', () => {
       spyOn(ngCore, 'isDevMode').and.returnValue(false);
 
       expect(createActiveRuntimeChecks()).toEqual({
         strictStateSerializability: false,
         strictActionSerializability: false,
-        strictImmutability: false,
+        strictActionImmutability: false,
+        strictStateImmutability: false,
+        strictActionWithinNgZone: false,
+        strictActionTypeUniqueness: false,
+      });
+    });
+
+    it('should disable runtime checks in production even if opted in to enable', () => {
+      spyOn(ngCore, 'isDevMode').and.returnValue(false);
+
+      expect(
+        createActiveRuntimeChecks({
+          strictStateSerializability: true,
+          strictActionSerializability: true,
+          strictActionWithinNgZone: true,
+          strictActionTypeUniqueness: true,
+        })
+      ).toEqual({
+        strictStateSerializability: false,
+        strictActionSerializability: false,
+        strictActionImmutability: false,
+        strictStateImmutability: false,
+        strictActionWithinNgZone: false,
+        strictActionTypeUniqueness: false,
       });
     });
   });
@@ -69,7 +77,7 @@ describe('Runtime checks:', () => {
       let logs: string[] = [];
       function metaReducerFactory(logMessage: string) {
         return function metaReducer(reducer: any) {
-          return function(state: any, action: any) {
+          return function (state: any, action: any) {
             logs.push(logMessage);
             return reducer(state, action);
           };
@@ -99,7 +107,7 @@ describe('Runtime checks:', () => {
         ],
       });
 
-      const store: Store<any> = TestBed.get(Store);
+      const store = TestBed.inject(Store);
       const expected = ['internal-single-one', 'internal-single-two', 'user'];
 
       expect(logs).toEqual(expected);
@@ -113,32 +121,32 @@ describe('Runtime checks:', () => {
   describe('State Serialization:', () => {
     const invalidAction = () => ({ type: ErrorTypes.UnserializableState });
 
-    it('should throw when enabled', (done: DoneFn) => {
+    it('should throw when enabled', fakeAsync(() => {
       const store = setupStore({ strictStateSerializability: true });
 
-      store.subscribe({
-        error: err => {
-          expect(err).toMatch(/Detected unserializable state/);
-          done();
-        },
-      });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).toThrowError(/Detected unserializable state/);
+    }));
 
-      store.dispatch(invalidAction());
-    });
-
-    it('should not throw when disabled', (done: DoneFn) => {
+    it('should not throw when disabled', fakeAsync(() => {
       const store = setupStore({ strictStateSerializability: false });
 
-      store.subscribe({
-        next: ({ state }) => {
-          if (state.invalidSerializationState) {
-            done();
-          }
-        },
-      });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).not.toThrow();
+    }));
 
-      store.dispatch(invalidAction());
-    });
+    it('should not throw for NgRx actions', fakeAsync(() => {
+      const store = setupStore({ strictStateSerializability: true });
+
+      expect(() => {
+        store.dispatch(makeNgrxAction(invalidAction()));
+        flush();
+      }).not.toThrow();
+    }));
   });
 
   describe('Action Serialization:', () => {
@@ -147,31 +155,23 @@ describe('Runtime checks:', () => {
       invalid: new Date(),
     });
 
-    it('should throw when enabled', (done: DoneFn) => {
+    it('should throw when enabled', fakeAsync(() => {
       const store = setupStore({ strictActionSerializability: true });
 
-      store.subscribe({
-        error: err => {
-          expect(err).toMatch(/Detected unserializable action/);
-          done();
-        },
-      });
-      store.dispatch(invalidAction());
-    });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).toThrowError(/Detected unserializable action/);
+    }));
 
-    it('should not throw when disabled', (done: DoneFn) => {
+    it('should not throw when disabled', fakeAsync(() => {
       const store = setupStore({ strictActionSerializability: false });
 
-      store.subscribe({
-        next: ({ state }) => {
-          if (state.invalidSerializationAction) {
-            done();
-          }
-        },
-      });
-
-      store.dispatch(invalidAction());
-    });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).not.toThrow();
+    }));
   });
 
   describe('State Mutations', () => {
@@ -179,31 +179,23 @@ describe('Runtime checks:', () => {
       type: ErrorTypes.MutateState,
     });
 
-    it('should throw when enabled', (done: DoneFn) => {
-      const store = setupStore({ strictImmutability: true });
+    it('should throw when enabled', fakeAsync(() => {
+      const store = setupStore({ strictStateImmutability: true });
 
-      store.subscribe({
-        error: _ => {
-          done();
-        },
-      });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).toThrowError(/Cannot add property/);
+    }));
 
-      store.dispatch(invalidAction());
-    });
+    it('should not throw when disabled', fakeAsync(() => {
+      const store = setupStore({ strictStateImmutability: false });
 
-    it('should not throw when disabled', (done: DoneFn) => {
-      const store = setupStore({ strictImmutability: false });
-
-      store.subscribe({
-        next: ({ state }) => {
-          if (state.invalidMutationState) {
-            done();
-          }
-        },
-      });
-
-      store.dispatch(invalidAction());
-    });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).not.toThrow();
+    }));
   });
 
   describe('Action Mutations', () => {
@@ -212,31 +204,107 @@ describe('Runtime checks:', () => {
       foo: 'foo',
     });
 
-    it('should throw when enabled', (done: DoneFn) => {
-      const store = setupStore({ strictImmutability: true });
+    it('should throw when enabled', fakeAsync(() => {
+      const store = setupStore({ strictActionImmutability: true });
 
-      store.subscribe({
-        error: _ => {
-          done();
-        },
-      });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).toThrowError(/Cannot assign to read only property/);
+    }));
 
-      store.dispatch(invalidAction());
-    });
+    it('should not throw when disabled', fakeAsync(() => {
+      const store = setupStore({ strictActionImmutability: false });
 
-    it('should not throw when disabled', (done: DoneFn) => {
-      const store = setupStore({ strictImmutability: false });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).not.toThrow();
+    }));
 
-      store.subscribe({
-        next: ({ state }) => {
-          if (state.invalidMutationAction) {
-            done();
-          }
-        },
-      });
+    it('should not throw for NgRx actions', fakeAsync(() => {
+      const store = setupStore({ strictActionImmutability: true });
 
-      store.dispatch(invalidAction());
-    });
+      expect(() => {
+        store.dispatch(makeNgrxAction(invalidAction()));
+        flush();
+      }).not.toThrow();
+    }));
+  });
+
+  describe('Action in NgZone', () => {
+    const invalidAction = () => ({ type: ErrorTypes.OutOfNgZoneAction });
+
+    it('should throw when running outside ngZone', fakeAsync(() => {
+      ngCore.NgZone.isInAngularZone = jasmine
+        .createSpy('isInAngularZone')
+        .and.returnValue(false);
+      const store = setupStore({ strictActionWithinNgZone: true });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).toThrowError(
+        "Action 'Action triggered outside of NgZone' running outside NgZone. https://ngrx.io/guide/store/configuration/runtime-checks#strictactionwithinngzone"
+      );
+    }));
+
+    it('should not throw when running in ngZone', fakeAsync(() => {
+      ngCore.NgZone.isInAngularZone = jasmine
+        .createSpy('isInAngularZone')
+        .and.returnValue(true);
+      const store = setupStore({ strictActionWithinNgZone: true });
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).not.toThrowError();
+
+      expect(ngCore.NgZone.isInAngularZone).toHaveBeenCalled();
+    }));
+
+    it('should not be called when disabled', fakeAsync(() => {
+      const store = setupStore({ strictActionWithinNgZone: false });
+      ngCore.NgZone.isInAngularZone = jasmine.createSpy('isInAngularZone');
+      expect(() => {
+        store.dispatch(invalidAction());
+        flush();
+      }).not.toThrow();
+
+      expect(ngCore.NgZone.isInAngularZone).not.toHaveBeenCalled();
+    }));
+  });
+});
+
+describe('ActionType uniqueness', () => {
+  beforeEach(() => {
+    // Clear before each test because action types are registered during tests
+    resetRegisteredActionTypes();
+  });
+
+  it('should throw when having duplicate action types', () => {
+    createAction('action 1');
+    createAction('action 1');
+
+    expect(() => {
+      setupStore({ strictActionTypeUniqueness: true });
+    }).toThrowError(/Action types are registered more than once/);
+  });
+
+  it('should not throw when having no duplicate action types', () => {
+    createAction('action 1');
+    createAction('action 2');
+
+    expect(() => {
+      setupStore({ strictActionTypeUniqueness: true });
+    }).not.toThrowError();
+  });
+
+  it('should not throw when disabled', () => {
+    createAction('action 1');
+    createAction('action 1');
+
+    expect(() => {
+      setupStore({ strictActionTypeUniqueness: false });
+    }).not.toThrowError();
   });
 });
 
@@ -252,7 +320,7 @@ function setupStore(runtimeChecks?: Partial<RuntimeChecks>): Store<any> {
     ],
   });
 
-  return TestBed.get(Store);
+  return TestBed.inject(Store);
 }
 
 enum ErrorTypes {
@@ -260,6 +328,7 @@ enum ErrorTypes {
   UnserializableAction = 'Action type producing unserializable action',
   MutateAction = 'Action type producing action mutation',
   MutateState = 'Action type producing state mutation',
+  OutOfNgZoneAction = 'Action triggered outside of NgZone',
 }
 
 function reducerWithBugs(state: any = {}, action: any) {
@@ -291,4 +360,9 @@ function reducerWithBugs(state: any = {}, action: any) {
     default:
       return state;
   }
+}
+
+export function makeNgrxAction(action: Action) {
+  action.type = '@ngrx ' + action.type;
+  return action;
 }

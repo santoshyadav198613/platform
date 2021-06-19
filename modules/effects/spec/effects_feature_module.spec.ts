@@ -40,11 +40,13 @@ describe('Effects Feature Module', () => {
         ],
       });
 
-      mockEffectSources = TestBed.get(EffectsRootModule);
+      mockEffectSources = TestBed.inject<unknown>(EffectsRootModule) as {
+        addEffects: jasmine.Spy;
+      };
     });
 
     it('should add all effects when instantiated', () => {
-      TestBed.get(EffectsFeatureModule);
+      TestBed.inject(EffectsFeatureModule);
 
       expect(mockEffectSources.addEffects).toHaveBeenCalledWith(sourceA);
       expect(mockEffectSources.addEffects).toHaveBeenCalledWith(sourceB);
@@ -61,21 +63,21 @@ describe('Effects Feature Module', () => {
         imports: [AppModule],
       });
 
-      effects = TestBed.get(FeatureEffects);
-      store = TestBed.get(Store);
+      effects = TestBed.inject(FeatureEffects);
+      store = TestBed.inject(Store);
     });
 
     it('should have the feature state defined to select from the effect', (done: any) => {
       const action = { type: 'INCREMENT' };
       const result = { type: 'INCREASE' };
 
-      effects.effectWithStore.subscribe(res => {
+      effects.effectWithStore.subscribe((res) => {
         expect(res).toEqual(result);
       });
 
       store.dispatch(action);
 
-      store.pipe(select(getDataState)).subscribe(data => {
+      store.pipe(select(getDataState)).subscribe((data) => {
         expect(data).toBe(110);
         done();
       });
@@ -85,13 +87,13 @@ describe('Effects Feature Module', () => {
       const action = { type: 'CREATE_INCREMENT' };
       const result = { type: 'CREATE_INCREASE' };
 
-      effects.createEffectWithStore.subscribe(res => {
+      effects.createEffectWithStore.subscribe((res) => {
         expect(res).toEqual(result);
       });
 
       store.dispatch(action);
 
-      store.pipe(select(getCreateDataState)).subscribe(data => {
+      store.pipe(select(getCreateDataState)).subscribe((data) => {
         expect(data).toBe(220);
         done();
       });
@@ -133,10 +135,10 @@ function reducer(state: DataState = initialState, action: Action) {
 
 const getFeatureState = createFeatureSelector<DataState>(FEATURE_KEY);
 
-const getDataState = createSelector(getFeatureState, state => state.data);
+const getDataState = createSelector(getFeatureState, (state) => state.data);
 const getCreateDataState = createSelector(
   getFeatureState,
-  state => state.createData
+  (state) => state.createData
 );
 
 @Injectable()

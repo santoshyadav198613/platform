@@ -1,17 +1,12 @@
 import { Injectable } from '@angular/core';
-
-import { Action } from '@ngrx/store';
-import { EntityAdapter, Dictionary, IdSelector, Update } from '@ngrx/entity';
-
-import { merge } from 'rxjs/operators';
-
+import { EntityAdapter, IdSelector, Update } from '@ngrx/entity';
 import {
   ChangeStateMap,
   ChangeType,
   EntityCollection,
 } from './entity-collection';
 import { EntityChangeTrackerBase } from './entity-change-tracker-base';
-import { defaultSelectId, toUpdateFactory } from '../utils/utilities';
+import { toUpdateFactory } from '../utils/utilities';
 import { EntityAction } from '../actions/entity-action';
 import { EntityActionDataServiceError } from '../dataservices/data-service-error';
 import { EntityActionGuard } from '../actions/entity-action-guard';
@@ -262,7 +257,7 @@ export class EntityCollectionReducerMethods<T> {
   ): EntityCollection<T> {
     const data = this.extractData(action);
     return {
-      ...this.adapter.addAll(data, collection),
+      ...this.adapter.setAll(data, collection),
       loading: false,
       loaded: true,
       changeState: {},
@@ -577,10 +572,10 @@ export class EntityCollectionReducerMethods<T> {
     collection: EntityCollection<T>,
     action: EntityAction<(number | string | T)[]>
   ): EntityCollection<T> {
-    const deleteIds = this.extractData(action).map(
-      d => (typeof d === 'object' ? this.selectId(d) : (d as string | number))
+    const deleteIds = this.extractData(action).map((d) =>
+      typeof d === 'object' ? this.selectId(d) : (d as string | number)
     );
-    deleteIds.forEach(deleteId => {
+    deleteIds.forEach((deleteId) => {
       const change = collection.changeState[deleteId];
       // If entity is already tracked ...
       if (change) {
@@ -948,7 +943,7 @@ export class EntityCollectionReducerMethods<T> {
   ): EntityCollection<T> {
     const entities = this.guard.mustBeEntities(action);
     return {
-      ...this.adapter.addAll(entities, collection),
+      ...this.adapter.setAll(entities, collection),
       loading: false,
       loaded: true,
       changeState: {},

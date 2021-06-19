@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+
 import { cold } from 'jasmine-marbles';
-import { Book } from '@example-app/books/models/book';
+
+import { Book } from '@example-app/books/models';
 import {
   BookStorageService,
   LOCAL_STORAGE_TOKEN,
@@ -9,10 +11,10 @@ import {
 describe('BookStorageService', () => {
   let fixture: any;
 
-  let localStorageFake: Storage & any = {
+  const localStorageFake: Storage & any = {
     removeItem: jest.fn(),
     setItem: jest.fn(),
-    getItem: jest.fn(_ => JSON.stringify(persistedCollection)),
+    getItem: jest.fn((_) => JSON.stringify(persistedCollection)),
   };
 
   const book1 = { id: '111', volumeInfo: {} } as Book;
@@ -32,7 +34,7 @@ describe('BookStorageService', () => {
         },
       ],
     });
-    fixture = TestBed.get(BookStorageService);
+    fixture = TestBed.inject(BookStorageService);
   });
 
   describe('supported', () => {
@@ -51,7 +53,7 @@ describe('BookStorageService', () => {
         ],
       });
 
-      fixture = TestBed.get(BookStorageService);
+      fixture = TestBed.inject(BookStorageService);
       const expected = cold('#', {}, 'Local Storage Not Supported');
       expect(fixture.supported()).toBeObservable(expected);
     });
@@ -96,7 +98,7 @@ describe('BookStorageService', () => {
   describe('removeFromCollection', () => {
     it('should remove item from collection', () => {
       const filterCollection = persistedCollection.filter(
-        f => f.id !== book2.id
+        (f) => f.id !== book2.id
       );
       const expected = cold('(-a|)', { a: filterCollection });
       expect(fixture.removeFromCollection([book2.id])).toBeObservable(expected);
@@ -112,7 +114,7 @@ describe('BookStorageService', () => {
 
     it('should remove multiple items from collection', () => {
       const filterCollection = persistedCollection.filter(
-        f => f.id !== book4.id
+        (f) => f.id !== book4.id
       );
       const expected = cold('(-a|)', { a: filterCollection });
       expect(fixture.removeFromCollection([book4.id])).toBeObservable(expected);

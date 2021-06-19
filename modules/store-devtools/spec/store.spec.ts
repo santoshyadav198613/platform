@@ -20,7 +20,7 @@ import { RECOMPUTE } from '../src/reducer';
 
 const counter = jasmine
   .createSpy('counter')
-  .and.callFake(function(state = 0, action: Action) {
+  .and.callFake(function (state = 0, action: Action) {
     switch (action.type) {
       case 'INCREMENT':
         return state + 1;
@@ -31,7 +31,7 @@ const counter = jasmine
     }
   });
 
-declare var mistake: any;
+declare let mistake: any;
 function counterWithBug(state = 0, action: Action) {
   switch (action.type) {
     case 'INCREMENT':
@@ -92,15 +92,18 @@ function createStore<T>(
   });
 
   const testbed: TestBed = getTestBed();
-  const store: Store<T> = testbed.get(Store);
-  const devtools: StoreDevtools = testbed.get(StoreDevtools);
-  const state: StateObservable = testbed.get(StateObservable);
-  const reducerManager: ReducerManager = testbed.get(ReducerManager);
+  const store = testbed.inject(Store);
+
+  const devtools = testbed.inject(StoreDevtools);
+  const state = testbed.inject(StateObservable);
+  const reducerManager = testbed.inject(ReducerManager);
   let liftedValue: LiftedState;
   let value: any;
 
-  const liftedStateSub = devtools.liftedState.subscribe(s => (liftedValue = s));
-  const stateSub = devtools.state.subscribe(s => (value = s));
+  const liftedStateSub = devtools.liftedState.subscribe(
+    (s) => (liftedValue = s)
+  );
+  const stateSub = devtools.state.subscribe((s) => (value = s));
 
   const getState = (): T => value.state;
   const getLiftedState = (): LiftedState => liftedValue;
@@ -334,7 +337,7 @@ describe('Store Devtools', () => {
       store.dispatch({ type: 'DECREMENT' });
       store.dispatch({ type: 'INCREMENT' });
 
-      let { computedStates } = fixture.getLiftedState();
+      const { computedStates } = fixture.getLiftedState();
       expect(computedStates[3].error).toMatch(/ReferenceError/);
       expect(computedStates[4].error).toMatch(
         /Interrupted by an error up the chain/
@@ -398,7 +401,7 @@ describe('Store Devtools', () => {
 
       expect(counter).toHaveBeenCalledTimes(3);
 
-      let savedComputedStates = getLiftedState().computedStates;
+      const savedComputedStates = getLiftedState().computedStates;
 
       devtools.jumpToState(0);
 
@@ -424,7 +427,7 @@ describe('Store Devtools', () => {
 
       expect(counter).toHaveBeenCalledTimes(3);
 
-      let savedComputedStates = getLiftedState().computedStates;
+      const savedComputedStates = getLiftedState().computedStates;
 
       devtools.dispatch({ type: 'lol' });
 
@@ -663,8 +666,8 @@ describe('Store Devtools', () => {
       fixture.store.dispatch({ type: 'DECREMENT' });
       fixture.store.dispatch({ type: 'DECREMENT' });
 
-      let liftedStoreState = fixture.getLiftedState();
-      let currentComputedState =
+      const liftedStoreState = fixture.getLiftedState();
+      const currentComputedState =
         liftedStoreState.computedStates[liftedStoreState.currentStateIndex];
       expect(liftedStoreState.currentStateIndex).toBe(4);
       expect(currentComputedState.state).toEqual({ state: 0 });
@@ -684,8 +687,8 @@ describe('Store Devtools', () => {
 
       // Auto-commit 2 actions by "fixing" reducer bug.
       fixture.replaceReducer(counter);
-      let liftedStoreState = fixture.getLiftedState();
-      let currentComputedState =
+      const liftedStoreState = fixture.getLiftedState();
+      const currentComputedState =
         liftedStoreState.computedStates[liftedStoreState.currentStateIndex];
       expect(liftedStoreState.currentStateIndex).toBe(2);
       expect(currentComputedState.state).toEqual({ state: -4 });
@@ -705,8 +708,8 @@ describe('Store Devtools', () => {
 
       // Auto-commit 2 actions by "fixing" reducer bug.
       fixture.replaceReducer(counter);
-      let liftedStoreState = fixture.getLiftedState();
-      let currentComputedState =
+      const liftedStoreState = fixture.getLiftedState();
+      const currentComputedState =
         liftedStoreState.computedStates[liftedStoreState.currentStateIndex];
       expect(liftedStoreState.currentStateIndex).toBe(0);
       expect(currentComputedState.state).toEqual({ state: -2 });
@@ -722,7 +725,7 @@ describe('Store Devtools', () => {
 
     it('should support a function to return devtools options', () => {
       expect(() => {
-        createStore(counter, function() {
+        createStore(counter, function () {
           return { maxAge: 1 };
         });
       }).toThrowError(/cannot be less than/);

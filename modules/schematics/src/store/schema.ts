@@ -18,9 +18,9 @@ export interface Schema {
    */
   flat?: boolean;
   /**
-   * Specifies if a spec file is generated.
+   * When true, does not create test files.
    */
-  spec?: boolean;
+  skipTests?: boolean;
   /**
    * Allows specification of the declaring module.
    */
@@ -39,4 +39,8 @@ export interface Schema {
    * Specifies the interface for the state
    */
   stateInterface?: string;
+  /**
+   * Setup state management without registering initial reducers.
+   */
+  minimal?: boolean;
 }

@@ -9,7 +9,7 @@ import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 import {
   addPackageToPackageJson,
   platformVersion,
-} from '@ngrx/entity/schematics-core';
+} from '../../schematics-core';
 import { Schema as EntityOptions } from './schema';
 
 function addNgRxEntityToPackageJson() {
@@ -25,7 +25,7 @@ function addNgRxEntityToPackageJson() {
   };
 }
 
-export default function(options: EntityOptions): Rule {
+export default function (options: EntityOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     return chain([
       options && options.skipPackageJson

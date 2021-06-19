@@ -9,7 +9,7 @@ import {
   createSelector,
 } from '@ngrx/store';
 import { combineLatest } from 'rxjs';
-import { first } from 'rxjs/operators';
+import { first, toArray, take, map } from 'rxjs/operators';
 
 import { INITIAL_STATE, ReducerManager, State } from '../src/private_export';
 import {
@@ -20,7 +20,14 @@ import {
   todos,
   visibilityFilter,
   VisibilityFilters,
+  resetId,
 } from './fixtures/todos';
+import {
+  RouterTestingModule,
+  SpyNgModuleFactoryLoader,
+} from '@angular/router/testing';
+import { NgModuleFactoryLoader, NgModule } from '@angular/core';
+import { Router } from '@angular/router';
 
 interface Todo {
   id: number;
@@ -34,7 +41,7 @@ interface TodoAppSchema {
 }
 
 describe('ngRx Integration spec', () => {
-  describe('todo integration spec', function() {
+  describe('todo integration spec', function () {
     let store: Store<TodoAppSchema>;
     let state: State<TodoAppSchema>;
 
@@ -48,23 +55,24 @@ describe('ngRx Integration spec', () => {
     };
 
     beforeEach(() => {
+      resetId();
       spyOn(reducers, 'todos').and.callThrough();
 
       TestBed.configureTestingModule({
         imports: [StoreModule.forRoot(reducers, { initialState })],
       });
 
-      store = TestBed.get(Store);
-      state = TestBed.get(State);
+      store = TestBed.inject(Store);
+      state = TestBed.inject(State);
     });
 
     it('should successfully instantiate', () => {
       expect(store).toBeDefined();
     });
 
-    it('should combine reducers automatically if a key/value map is provided', () => {
+    it('should combine reducers automatically if a key/value map is provided', (done) => {
       const action = { type: 'Test Action' };
-      const reducer$: ReducerManager = TestBed.get(ReducerManager);
+      const reducer$ = TestBed.inject(ReducerManager);
 
       reducer$.pipe(first()).subscribe((reducer: ActionReducer<any, any>) => {
         expect(reducer).toBeDefined();
@@ -73,11 +81,12 @@ describe('ngRx Integration spec', () => {
         reducer({ todos: [] }, action);
 
         expect(reducers.todos).toHaveBeenCalledWith([], action);
+        done();
       });
     });
 
     it('should use a provided initial state', () => {
-      const resolvedInitialState = TestBed.get(INITIAL_STATE);
+      const resolvedInitialState = TestBed.inject(INITIAL_STATE);
 
       expect(resolvedInitialState).toEqual(initialState);
     });
@@ -123,7 +132,10 @@ describe('ngRx Integration spec', () => {
           payload: { id: state.value.todos[0].id },
         });
 
-        const filterVisibleTodos = (visibilityFilter: any, todos: any) => {
+        const filterVisibleTodos = (
+          visibilityFilter: string,
+          todos: Todo[]
+        ) => {
           let predicate;
           if (visibilityFilter === VisibilityFilters.SHOW_ALL) {
             predicate = () => true;
@@ -137,13 +149,11 @@ describe('ngRx Integration spec', () => {
 
         let currentlyVisibleTodos: Todo[] = [];
 
-        combineLatest(
-          store.select('visibilityFilter'),
-          store.select('todos'),
-          filterVisibleTodos
-        ).subscribe(visibleTodos => {
-          currentlyVisibleTodos = visibleTodos;
-        });
+        combineLatest([store.select('visibilityFilter'), store.select('todos')])
+          .pipe(map(([filter, todos]) => filterVisibleTodos(filter, todos)))
+          .subscribe((visibleTodos) => {
+            currentlyVisibleTodos = visibleTodos;
+          });
 
         expect(currentlyVisibleTodos.length).toBe(2);
 
@@ -177,33 +187,30 @@ describe('ngRx Integration spec', () => {
         expect(currentlyVisibleTodos.length).toBe(0);
       });
 
-      it('should use props to get a todo', () => {
+      it('should use props to get a todo', (done: any) => {
         const getTodosById = createSelector(
           (state: TodoAppSchema) => state.todos,
           (todos: Todo[], id: number) => {
-            return todos.find(p => p.id === id);
+            return todos.find((p) => p.id === id);
           }
         );
 
-        let testCase = 1;
         const todo$ = store.select(getTodosById, 2);
-        todo$.subscribe(todo => {
-          if (testCase === 1) {
-            expect(todo).toEqual(undefined);
-          } else if (testCase === 2) {
-            expect(todo).toEqual({
+        todo$.pipe(take(3), toArray()).subscribe((res) => {
+          expect(res).toEqual([
+            undefined,
+            {
               id: 2,
               text: 'second todo',
               completed: false,
-            });
-          } else if (testCase === 3) {
-            expect(todo).toEqual({
+            },
+            {
               id: 2,
               text: 'second todo',
               completed: true,
-            });
-          }
-          testCase++;
+            },
+          ]);
+          done();
         });
 
         store.dispatch({ type: ADD_TODO, payload: { text: 'first todo' } });
@@ -214,36 +221,25 @@ describe('ngRx Integration spec', () => {
         });
       });
 
-      it('should use the selector and props to get a todo', () => {
+      it('should use the selector and props to get a todo', (done: any) => {
         const getTodosState = createFeatureSelector<TodoAppSchema, Todo[]>(
           'todos'
         );
-        const getTodos = createSelector(getTodosState, todos => todos);
+        const getTodos = createSelector(getTodosState, (todos) => todos);
         const getTodosById = createSelector(
           getTodos,
           (state: TodoAppSchema, id: number) => id,
-          (todos, id) => todos.find(todo => todo.id === id)
+          (todos, id) => todos.find((todo) => todo.id === id)
         );
 
-        let testCase = 1;
         const todo$ = store.select(getTodosById, 2);
-        todo$.subscribe(todo => {
-          if (testCase === 1) {
-            expect(todo).toEqual(undefined);
-          } else if (testCase === 2) {
-            expect(todo).toEqual({
-              id: 2,
-              text: 'second todo',
-              completed: false,
-            });
-          } else if (testCase === 3) {
-            expect(todo).toEqual({
-              id: 2,
-              text: 'second todo',
-              completed: true,
-            });
-          }
-          testCase++;
+        todo$.pipe(take(3), toArray()).subscribe((res) => {
+          expect(res).toEqual([
+            undefined,
+            { id: 2, text: 'second todo', completed: false },
+            { id: 2, text: 'second todo', completed: true },
+          ]);
+          done();
         });
 
         store.dispatch({ type: ADD_TODO, payload: { text: 'first todo' } });
@@ -264,7 +260,10 @@ describe('ngRx Integration spec', () => {
           payload: { id: state.value.todos[0].id },
         });
 
-        const filterVisibleTodos = (visibilityFilter: any, todos: any) => {
+        const filterVisibleTodos = (
+          visibilityFilter: string,
+          todos: Todo[]
+        ) => {
           let predicate;
           if (visibilityFilter === VisibilityFilters.SHOW_ALL) {
             predicate = () => true;
@@ -278,13 +277,14 @@ describe('ngRx Integration spec', () => {
 
         let currentlyVisibleTodos: Todo[] = [];
 
-        combineLatest(
+        combineLatest([
           store.pipe(select('visibilityFilter')),
           store.pipe(select('todos')),
-          filterVisibleTodos
-        ).subscribe(visibleTodos => {
-          currentlyVisibleTodos = visibleTodos;
-        });
+        ])
+          .pipe(map(([filter, todos]) => filterVisibleTodos(filter, todos)))
+          .subscribe((visibleTodos) => {
+            currentlyVisibleTodos = visibleTodos;
+          });
 
         expect(currentlyVisibleTodos.length).toBe(2);
 
@@ -318,36 +318,25 @@ describe('ngRx Integration spec', () => {
         expect(currentlyVisibleTodos.length).toBe(0);
       });
 
-      it('should use the selector and props to get a todo', () => {
+      it('should use the selector and props to get a todo', (done: any) => {
         const getTodosState = createFeatureSelector<TodoAppSchema, Todo[]>(
           'todos'
         );
-        const getTodos = createSelector(getTodosState, todos => todos);
+        const getTodos = createSelector(getTodosState, (todos) => todos);
         const getTodosById = createSelector(
           getTodos,
           (state: TodoAppSchema, id: number) => id,
-          (todos, id) => todos.find(todo => todo.id === id)
+          (todos, id) => todos.find((todo) => todo.id === id)
         );
 
-        let testCase = 1;
         const todo$ = store.pipe(select(getTodosById, 2));
-        todo$.subscribe(todo => {
-          if (testCase === 1) {
-            expect(todo).toEqual(undefined);
-          } else if (testCase === 2) {
-            expect(todo).toEqual({
-              id: 2,
-              text: 'second todo',
-              completed: false,
-            });
-          } else if (testCase === 3) {
-            expect(todo).toEqual({
-              id: 2,
-              text: 'second todo',
-              completed: true,
-            });
-          }
-          testCase++;
+        todo$.pipe(take(3), toArray()).subscribe((res) => {
+          expect(res).toEqual([
+            undefined,
+            { id: 2, text: 'second todo', completed: false },
+            { id: 2, text: 'second todo', completed: true },
+          ]);
+          done();
         });
 
         store.dispatch({ type: ADD_TODO, payload: { text: 'first todo' } });
@@ -358,7 +347,7 @@ describe('ngRx Integration spec', () => {
         });
       });
 
-      it('should use the props in the projector to get a todo', () => {
+      it('should use the props in the projector to get a todo', (done: any) => {
         const getTodosState = createFeatureSelector<TodoAppSchema, Todo[]>(
           'todos'
         );
@@ -366,28 +355,25 @@ describe('ngRx Integration spec', () => {
         const getTodosById = createSelector(
           getTodosState,
           (todos: Todo[], { id }: { id: number }) =>
-            todos.find(todo => todo.id === id)
+            todos.find((todo) => todo.id === id)
         );
 
-        let testCase = 1;
         const todo$ = store.pipe(select(getTodosById, { id: 2 }));
-        todo$.subscribe(todo => {
-          if (testCase === 1) {
-            expect(todo).toEqual(undefined);
-          } else if (testCase === 2) {
-            expect(todo).toEqual({
+        todo$.pipe(take(3), toArray()).subscribe((res) => {
+          expect(res).toEqual([
+            undefined,
+            {
               id: 2,
               text: 'second todo',
               completed: false,
-            });
-          } else if (testCase === 3) {
-            expect(todo).toEqual({
+            },
+            {
               id: 2,
               text: 'second todo',
               completed: true,
-            });
-          }
-          testCase++;
+            },
+          ]);
+          done();
         });
 
         store.dispatch({ type: ADD_TODO, payload: { text: 'first todo' } });
@@ -429,9 +415,9 @@ describe('ngRx Integration spec', () => {
         ],
       });
 
-      const store: Store<any> = TestBed.get(Store);
+      const store = TestBed.inject(Store);
 
-      let expected = [
+      const expected = [
         {
           todos: initialState.todos,
           visibilityFilter: initialState.visibilityFilter,
@@ -439,7 +425,7 @@ describe('ngRx Integration spec', () => {
         },
       ];
 
-      store.pipe(select(state => state)).subscribe(state => {
+      store.pipe(select((state) => state)).subscribe((state) => {
         expect(state).toEqual(expected.shift());
       });
     });
@@ -464,7 +450,7 @@ describe('ngRx Integration spec', () => {
         ],
       });
 
-      const store: Store<any> = TestBed.get(Store);
+      const store = TestBed.inject(Store);
 
       const expected = {
         todos: {
@@ -474,8 +460,34 @@ describe('ngRx Integration spec', () => {
         items: [{ id: 1, completed: false, text: 'Item' }],
       };
 
-      store.pipe(select(state => state)).subscribe(state => {
+      store.pipe(select((state) => state)).subscribe((state) => {
         expect(state).toEqual(expected);
+      });
+    });
+
+    it('throws if forRoot() is used more than once', (done: any) => {
+      @NgModule({
+        imports: [StoreModule.forRoot({})],
+      })
+      class FeatureModule {}
+
+      TestBed.configureTestingModule({
+        imports: [StoreModule.forRoot({}), RouterTestingModule.withRoutes([])],
+      });
+
+      const router = TestBed.inject(Router);
+      const loader: SpyNgModuleFactoryLoader = TestBed.inject(
+        NgModuleFactoryLoader
+      ) as SpyNgModuleFactoryLoader;
+
+      loader.stubbedModules = { feature: FeatureModule };
+      router.resetConfig([{ path: 'feature-path', loadChildren: 'feature' }]);
+
+      router.navigateByUrl('/feature-path').catch((err: TypeError) => {
+        expect(err.message).toBe(
+          'StoreModule.forRoot() called twice. Feature modules should use StoreModule.forFeature() instead.'
+        );
+        done();
       });
     });
   });

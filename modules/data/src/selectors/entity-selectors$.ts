@@ -1,11 +1,5 @@
 import { Inject, Injectable } from '@angular/core';
-
-import {
-  createFeatureSelector,
-  createSelector,
-  Selector,
-  Store,
-} from '@ngrx/store';
+import { Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { Dictionary } from '@ngrx/entity';
 
@@ -25,8 +19,6 @@ import {
   EntityCollection,
   ChangeStateMap,
 } from '../reducers/entity-collection';
-import { EntityCollectionCreator } from '../reducers/entity-collection-creator';
-import { EntitySelectorsFactory } from './entity-selectors';
 
 /**
  * The selector observable functions for entity collection members.
@@ -34,6 +26,9 @@ import { EntitySelectorsFactory } from './entity-selectors';
 export interface EntitySelectors$<T> {
   /** Name of the entity collection for these selectors$ */
   readonly entityName: string;
+
+  /** Names from custom selectors from additionalCollectionState fits here, 'any' to avoid conflict with entityName */
+  readonly [name: string]: Observable<any> | Store<any> | any;
 
   /** Observable of the collection as a whole */
   readonly collection$: Observable<EntityCollection> | Store<EntityCollection>;
@@ -116,7 +111,7 @@ export class EntitySelectors$Factory {
       entityName,
     };
 
-    Object.keys(selectors).forEach(name => {
+    Object.keys(selectors).forEach((name) => {
       if (name.startsWith('select')) {
         // strip 'select' prefix from the selector fn name and append `$`
         // Ex: 'selectEntities' => 'entities$'

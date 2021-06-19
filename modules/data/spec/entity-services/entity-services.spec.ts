@@ -1,19 +1,8 @@
-import { Injectable } from '@angular/core';
-import { ComponentFixture, inject, TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
 import { Action, StoreModule, Store } from '@ngrx/store';
 import { Actions, EffectsModule } from '@ngrx/effects';
-
-import { Observable, of, ReplaySubject, throwError, timer } from 'rxjs';
-import {
-  delay,
-  filter,
-  first,
-  mergeMap,
-  skip,
-  tap,
-  withLatestFrom,
-} from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { first, skip } from 'rxjs/operators';
 
 import {
   EntityAction,
@@ -38,7 +27,9 @@ describe('EntityServices', () => {
     it('should emit EntityAction errors for multiple entity types', () => {
       const errors: EntityAction[] = [];
       const { entityActionFactory, entityServices } = entityServicesSetup();
-      entityServices.entityActionErrors$.subscribe(error => errors.push(error));
+      entityServices.entityActionErrors$.subscribe((error) =>
+        errors.push(error)
+      );
 
       entityServices.dispatch({ type: 'not-an-entity-action' });
       entityServices.dispatch(
@@ -77,7 +68,7 @@ describe('EntityServices', () => {
       } = entityServicesSetup();
 
       // entityCache$.subscribe() callback invoked immediately. The cache is empty at first.
-      entityServices.entityCache$.subscribe(ec => entityCacheValues.push(ec));
+      entityServices.entityCache$.subscribe((ec) => entityCacheValues.push(ec));
 
       // This first action to go through the Hero's EntityCollectionReducer
       // creates the collection in the EntityCache as a side-effect,
@@ -89,18 +80,15 @@ describe('EntityServices', () => {
       );
       store.dispatch(heroAction);
 
-      expect(entityCacheValues.length).toEqual(
-        2,
-        'entityCache$ callback twice'
-      );
-      expect(entityCacheValues[0]).toEqual({}, 'empty at first');
-      expect(entityCacheValues[1].Hero).toBeDefined('has Hero collection');
+      expect(entityCacheValues.length).toEqual(2);
+      expect(entityCacheValues[0]).toEqual({});
+      expect(entityCacheValues[1].Hero).toBeDefined();
     });
   });
 
   describe('dispatch(MergeQuerySet)', () => {
     // using async test to guard against false test pass.
-    it('should update entityCache$ twice after merging two individual collections', (done: DoneFn) => {
+    it('should update entityCache$ twice after merging two individual collections', (done: any) => {
       const hero1 = { id: 1, name: 'A' } as Hero;
       const hero2 = { id: 2, name: 'B' } as Hero;
       const heroes = [hero1, hero2];
@@ -108,28 +96,22 @@ describe('EntityServices', () => {
       const villain = { key: 'DE', name: 'Dr. Evil' } as Villain;
 
       const { entityServices } = entityServicesSetup();
-      const heroCollectionService = entityServices.getEntityCollectionService<
-        Hero
-      >('Hero');
-      const villainCollectionService = entityServices.getEntityCollectionService<
-        Villain
-      >('Villain');
+      const heroCollectionService = entityServices.getEntityCollectionService<Hero>(
+        'Hero'
+      );
+      const villainCollectionService = entityServices.getEntityCollectionService<Villain>(
+        'Villain'
+      );
 
       const entityCacheValues: any = [];
-      entityServices.entityCache$.subscribe(cache => {
+      entityServices.entityCache$.subscribe((cache) => {
         entityCacheValues.push(cache);
         if (entityCacheValues.length === 3) {
-          expect(entityCacheValues[0]).toEqual({}, '#1 empty at first');
-          expect(entityCacheValues[1]['Hero'].ids).toEqual(
-            [1, 2],
-            '#2 has heroes'
-          );
-          expect(entityCacheValues[1]['Villain']).toBeUndefined(
-            '#2 does not have Villain collection'
-          );
+          expect(entityCacheValues[0]).toEqual({});
+          expect(entityCacheValues[1]['Hero'].ids).toEqual([1, 2]);
+          expect(entityCacheValues[1]['Villain']).toBeUndefined();
           expect(entityCacheValues[2]['Villain'].entities['DE']).toEqual(
-            villain,
-            '#3 has villain'
+            villain
           );
           done();
         }
@@ -147,7 +129,7 @@ describe('EntityServices', () => {
     });
 
     // using async test to guard against false test pass.
-    it('should update entityCache$ once when MergeQuerySet multiple collections', (done: DoneFn) => {
+    it('should update entityCache$ once when MergeQuerySet multiple collections', (done: any) => {
       const hero1 = { id: 1, name: 'A' } as Hero;
       const hero2 = { id: 2, name: 'B' } as Hero;
       const heroes = [hero1, hero2];
@@ -161,19 +143,11 @@ describe('EntityServices', () => {
       const { entityServices } = entityServicesSetup();
 
       // Skip initial value. Want the first one after merge is dispatched
-      entityServices.entityCache$
-        .pipe(
-          skip(1),
-          first()
-        )
-        .subscribe(cache => {
-          expect(cache['Hero'].ids).toEqual([1, 2], 'has merged heroes');
-          expect(cache['Villain'].entities['DE']).toEqual(
-            villain,
-            'has merged villain'
-          );
-          done();
-        });
+      entityServices.entityCache$.pipe(skip(1), first()).subscribe((cache) => {
+        expect(cache['Hero'].ids).toEqual([1, 2]);
+        expect(cache['Villain'].entities['DE']).toEqual(villain);
+        done();
+      });
       entityServices.dispatch(action);
     });
   });
@@ -181,22 +155,26 @@ describe('EntityServices', () => {
 
 // #region test helpers
 class Hero {
-  id: number;
-  name: string;
+  id!: number;
+  name!: string;
   saying?: string;
 }
 class Villain {
-  key: string;
-  name: string;
+  key!: string;
+  name!: string;
 }
 
 const entityMetadata: EntityMetadataMap = {
   Hero: {},
-  Villain: { selectId: villain => villain.key },
+  Villain: { selectId: (villain) => villain.key },
 };
 
 function entityServicesSetup() {
-  const logger = jasmine.createSpyObj('Logger', ['error', 'log', 'warn']);
+  const logger = {
+    error: jasmine.createSpy('error'),
+    log: jasmine.createSpy('log'),
+    warn: jasmine.createSpy('warn'),
+  };
 
   TestBed.configureTestingModule({
     imports: [
@@ -206,7 +184,7 @@ function entityServicesSetup() {
         entityMetadata: entityMetadata,
       }),
     ],
-    /* tslint:disable-next-line:no-use-before-declare */
+    /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
     providers: [
       { provide: EntityCacheEffects, useValue: {} },
       { provide: EntityDataService, useValue: null },
@@ -214,15 +192,15 @@ function entityServicesSetup() {
     ],
   });
 
-  const actions$: Observable<Action> = TestBed.get(Actions);
-  const entityActionFactory: EntityActionFactory = TestBed.get(
+  const actions$: Observable<Action> = TestBed.inject(Actions);
+  const entityActionFactory: EntityActionFactory = TestBed.inject(
     EntityActionFactory
   );
-  const entityDispatcherFactory: EntityDispatcherFactory = TestBed.get(
+  const entityDispatcherFactory: EntityDispatcherFactory = TestBed.inject(
     EntityDispatcherFactory
   );
-  const entityServices: EntityServices = TestBed.get(EntityServices);
-  const store: Store<EntityCache> = TestBed.get(Store);
+  const entityServices: EntityServices = TestBed.inject(EntityServices);
+  const store: Store<EntityCache> = TestBed.inject(Store);
 
   return {
     actions$,

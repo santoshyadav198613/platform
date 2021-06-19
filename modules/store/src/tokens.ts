@@ -1,6 +1,9 @@
 import { InjectionToken } from '@angular/core';
 import { RuntimeChecks, MetaReducer } from './models';
 
+export const _ROOT_STORE_GUARD = new InjectionToken<void>(
+  '@ngrx/store Internal Root Guard'
+);
 export const _INITIAL_STATE = new InjectionToken(
   '@ngrx/store Internal Initial State'
 );
@@ -63,7 +66,15 @@ export const _RESOLVED_META_REDUCERS = new InjectionToken<MetaReducer>(
 );
 
 /**
- * Runtime checks defined by the user
+ * Runtime checks defined by the user via an InjectionToken
+ * Defaults to `_USER_RUNTIME_CHECKS`
+ */
+export const USER_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
+  '@ngrx/store User Runtime Checks Config'
+);
+
+/**
+ * Runtime checks defined by the user via forRoot()
  */
 export const _USER_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
   '@ngrx/store Internal User Runtime Checks Config'
@@ -72,6 +83,10 @@ export const _USER_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
 /**
  * Runtime checks currently in use
  */
-export const _ACTIVE_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
-  '@ngrx/store Internal Runetime Checks'
+export const ACTIVE_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
+  '@ngrx/store Internal Runtime Checks'
+);
+
+export const _ACTION_TYPE_UNIQUENESS_CHECK = new InjectionToken<void>(
+  '@ngrx/store Check if Action types are unique'
 );

@@ -1,15 +1,5 @@
-import {
-  Inject,
-  Injectable,
-  InjectionToken,
-  Optional,
-  FactoryProvider,
-} from '@angular/core';
-import {
-  createFeatureSelector,
-  createSelector,
-  MemoizedSelector,
-} from '@ngrx/store';
+import { InjectionToken, Optional, FactoryProvider } from '@angular/core';
+import { createFeatureSelector, MemoizedSelector } from '@ngrx/store';
 import { EntityCache } from '../reducers/entity-cache';
 import {
   ENTITY_CACHE_NAME,
@@ -18,7 +8,7 @@ import {
 
 export const ENTITY_CACHE_SELECTOR_TOKEN = new InjectionToken<
   MemoizedSelector<Object, EntityCache>
->('@ngrx/data/entity-cache-selector');
+>('@ngrx/data Entity Cache Selector');
 
 export const entityCacheSelectorProvider: FactoryProvider = {
   provide: ENTITY_CACHE_SELECTOR_TOKEN,

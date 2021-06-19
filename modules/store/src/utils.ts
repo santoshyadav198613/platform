@@ -11,6 +11,39 @@ export function combineReducers<T, V extends Action = Action>(
   reducers: ActionReducerMap<T, V>,
   initialState?: Partial<T>
 ): ActionReducer<T, V>;
+/**
+ * @description
+ * Combines reducers for individual features into a single reducer.
+ *
+ * You can use this function to delegate handling of state transitions to multiple reducers, each acting on their
+ * own sub-state within the root state.
+ *
+ * @param reducers An object mapping keys of the root state to their corresponding feature reducer.
+ * @param initialState Provides a state value if the current state is `undefined`, as it is initially.
+ * @returns A reducer function.
+ *
+ * @usageNotes
+ *
+ * **Example combining two feature reducers into one "root" reducer**
+ *
+ * ```ts
+ * export const reducer = combineReducers({
+ *   featureA: featureAReducer,
+ *   featureB: featureBReducer
+ * });
+ * ```
+ *
+ * You can also override the initial states of the sub-features:
+ * ```ts
+ * export const reducer = combineReducers({
+ *   featureA: featureAReducer,
+ *   featureB: featureBReducer
+ * }, {
+ *   featureA: { counterA: 13 },
+ *   featureB: { counterB: 37 }
+ * });
+ * ```
+ */
 export function combineReducers(
   reducers: any,
   initialState: any = {}
@@ -49,7 +82,7 @@ export function omit<T extends { [key: string]: any }>(
   keyToRemove: keyof T
 ): Partial<T> {
   return Object.keys(object)
-    .filter(key => key !== keyToRemove)
+    .filter((key) => key !== keyToRemove)
     .reduce((result, key) => Object.assign(result, { [key]: object[key] }), {});
 }
 
@@ -76,7 +109,7 @@ export function compose<A, B, C, D, E, F>(
 ): (i: A) => F;
 export function compose<A = any, F = any>(...functions: any[]): (i: A) => F;
 export function compose(...functions: any[]) {
-  return function(arg: any) {
+  return function (arg: any) {
     if (functions.length === 0) {
       return arg;
     }

@@ -1,6 +1,6 @@
-package(default_visibility = ["//visibility:public"])
-
 load("//tools:defaults.bzl", "ng_module", "ng_package")
+
+package(default_visibility = ["//visibility:public"])
 
 ng_module(
     name = "effects",
@@ -23,7 +23,7 @@ ng_package(
         "//modules/effects/testing:package.json",
     ],
     entry_point = "modules/effects/index.js",
-    packages = [
+    nested_packages = [
         "//modules/effects/migrations:npm_package",
         "//modules/effects/schematics:npm_package",
         "//modules/effects/schematics-core:npm_package",

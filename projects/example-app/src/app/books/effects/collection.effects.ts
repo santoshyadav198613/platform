@@ -1,14 +1,17 @@
 import { Injectable } from '@angular/core';
-import { Actions, Effect, ofType, createEffect } from '@ngrx/effects';
+
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { defer, of } from 'rxjs';
 import { catchError, map, mergeMap, switchMap } from 'rxjs/operators';
-import { Book } from '@example-app/books/models/book';
+
 import {
   CollectionApiActions,
   CollectionPageActions,
   SelectedBookPageActions,
 } from '@example-app/books/actions';
+import { Book } from '@example-app/books/models';
 import { BookStorageService } from '@example-app/core/services';
+
 @Injectable()
 export class CollectionEffects {
   /**
@@ -28,13 +31,13 @@ export class CollectionEffects {
 
   loadCollection$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(CollectionPageActions.loadCollection),
+      ofType(CollectionPageActions.enter),
       switchMap(() =>
         this.storageService.getCollection().pipe(
           map((books: Book[]) =>
             CollectionApiActions.loadBooksSuccess({ books })
           ),
-          catchError(error =>
+          catchError((error) =>
             of(CollectionApiActions.loadBooksFailure({ error }))
           )
         )

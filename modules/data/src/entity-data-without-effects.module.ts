@@ -10,7 +10,6 @@ import {
 
 import {
   Action,
-  ActionReducer,
   combineReducers,
   MetaReducer,
   ReducerManager,
@@ -24,13 +23,9 @@ import { EntityActionFactory } from './actions/entity-action-factory';
 import { EntityCache } from './reducers/entity-cache';
 import { EntityCacheDispatcher } from './dispatchers/entity-cache-dispatcher';
 import { entityCacheSelectorProvider } from './selectors/entity-cache-selector';
-import { EntityCollectionService } from './entity-services/entity-collection-service';
 import { EntityCollectionServiceElementsFactory } from './entity-services/entity-collection-service-elements-factory';
 import { EntityCollectionServiceFactory } from './entity-services/entity-collection-service-factory';
-import {
-  EntityCollectionServiceMap,
-  EntityServices,
-} from './entity-services/entity-services';
+import { EntityServices } from './entity-services/entity-services';
 import { EntityCollection } from './reducers/entity-collection';
 import { EntityCollectionCreator } from './reducers/entity-collection-creator';
 import { EntityCollectionReducerFactory } from './reducers/entity-collection-reducer';
@@ -38,12 +33,7 @@ import { EntityCollectionReducerMethodsFactory } from './reducers/entity-collect
 import { EntityCollectionReducerRegistry } from './reducers/entity-collection-reducer-registry';
 import { EntityDispatcherFactory } from './dispatchers/entity-dispatcher-factory';
 import { EntityDefinitionService } from './entity-metadata/entity-definition.service';
-import { EntityEffects } from './effects/entity-effects';
-import {
-  EntityMetadataMap,
-  ENTITY_METADATA_TOKEN,
-} from './entity-metadata/entity-metadata';
-
+import { EntityMetadataMap } from './entity-metadata/entity-metadata';
 import { EntityCacheReducerFactory } from './reducers/entity-cache-reducer';
 import {
   ENTITY_CACHE_NAME,
@@ -54,19 +44,18 @@ import {
 } from './reducers/constants';
 
 import { DefaultLogger } from './utils/default-logger';
-import { DefaultPluralizer } from './utils/default-pluralizer';
-import { EntitySelectors } from './selectors/entity-selectors';
 import { EntitySelectorsFactory } from './selectors/entity-selectors';
 import { EntitySelectors$Factory } from './selectors/entity-selectors$';
 import { EntityServicesBase } from './entity-services/entity-services-base';
 import { EntityServicesElements } from './entity-services/entity-services-elements';
-import { Logger, Pluralizer, PLURAL_NAMES_TOKEN } from './utils/interfaces';
+import { Logger, PLURAL_NAMES_TOKEN } from './utils/interfaces';
 
 export interface EntityDataModuleConfig {
   entityMetadata?: EntityMetadataMap;
   entityCacheMetaReducers?: (
     | MetaReducer<EntityCache, Action>
-    | InjectionToken<MetaReducer<EntityCache, Action>>)[];
+    | InjectionToken<MetaReducer<EntityCache, Action>>
+  )[];
   entityCollectionMetaReducers?: MetaReducer<EntityCollection, EntityAction>[];
   // Initial EntityCache state or a function that returns that state
   initialEntityCacheState?: EntityCache | (() => EntityCache);
@@ -109,7 +98,9 @@ export interface EntityDataModuleConfig {
 export class EntityDataModuleWithoutEffects implements OnDestroy {
   private entityCacheFeature: any;
 
-  static forRoot(config: EntityDataModuleConfig): ModuleWithProviders {
+  static forRoot(
+    config: EntityDataModuleConfig
+  ): ModuleWithProviders<EntityDataModuleWithoutEffects> {
     return {
       ngModule: EntityDataModuleWithoutEffects,
       providers: [
@@ -149,9 +140,10 @@ export class EntityDataModuleWithoutEffects implements OnDestroy {
     @Inject(ENTITY_CACHE_META_REDUCERS)
     private metaReducers: (
       | MetaReducer<EntityCache, Action>
-      | InjectionToken<MetaReducer<EntityCache, Action>>)[]
+      | InjectionToken<MetaReducer<EntityCache, Action>>
+    )[]
   ) {
-    // Add the ngrx-data feature to the Store's features
+    // Add the @ngrx/data feature to the Store's features
     // as Store.forFeature does for StoreFeatureModule
     const key = entityCacheName || ENTITY_CACHE_NAME;
 
@@ -160,7 +152,7 @@ export class EntityDataModuleWithoutEffects implements OnDestroy {
 
     const reducers: MetaReducer<EntityCache, Action>[] = (
       metaReducers || []
-    ).map(mr => {
+    ).map((mr) => {
       return mr instanceof InjectionToken ? injector.get(mr) : mr;
     });
 
@@ -174,6 +166,7 @@ export class EntityDataModuleWithoutEffects implements OnDestroy {
     reducerManager.addFeature(this.entityCacheFeature);
   }
 
+  // eslint-disable-next-line @angular-eslint/contextual-lifecycle
   ngOnDestroy() {
     this.reducerManager.removeFeature(this.entityCacheFeature);
   }

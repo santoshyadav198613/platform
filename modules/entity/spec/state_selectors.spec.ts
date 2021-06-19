@@ -24,7 +24,7 @@ describe('Entity State Selectors', () => {
       });
 
       state = {
-        books: adapter.addAll(
+        books: adapter.setAll(
           [AClockworkOrange, AnimalFarm, TheGreatGatsby],
           adapter.getInitialState()
         ),
@@ -70,7 +70,7 @@ describe('Entity State Selectors', () => {
         selectId: (book: BookModel) => book.id,
       });
 
-      state = adapter.addAll(
+      state = adapter.setAll(
         [AClockworkOrange, AnimalFarm, TheGreatGatsby],
         adapter.getInitialState()
       );
@@ -95,7 +95,7 @@ describe('Entity State Selectors', () => {
       const singleEntity: MemoizedSelector<
         EntityState<BookModel>,
         BookModel | undefined
-      > = createSelector(selectors.selectEntities, enitites => enitites[0]);
+      > = createSelector(selectors.selectEntities, (enitites) => enitites[0]);
     });
 
     it('should create a selector for selecting the list of models', () => {

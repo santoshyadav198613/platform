@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { select, Store } from '@ngrx/store';
+
+import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
 
 import { CollectionPageActions } from '@example-app/books/actions';
-import { Book } from '@example-app/books/models/book';
+import { Book } from '@example-app/books/models';
 import * as fromBooks from '@example-app/books/reducers';
 
 @Component({
@@ -34,11 +35,11 @@ import * as fromBooks from '@example-app/books/reducers';
 export class CollectionPageComponent implements OnInit {
   books$: Observable<Book[]>;
 
-  constructor(private store: Store<fromBooks.State>) {
-    this.books$ = store.pipe(select(fromBooks.getBookCollection));
+  constructor(private store: Store) {
+    this.books$ = store.select(fromBooks.selectBookCollection);
   }
 
   ngOnInit() {
-    this.store.dispatch(CollectionPageActions.loadCollection());
+    this.store.dispatch(CollectionPageActions.enter());
   }
 }

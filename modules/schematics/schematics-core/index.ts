@@ -7,7 +7,10 @@ import {
   group,
   capitalize,
   featurePath,
+  pluralize,
 } from './utility/strings';
+
+export { isIvyEnabled } from './utility/angular-utils';
 
 export {
   findNodes,
@@ -20,7 +23,10 @@ export {
   addDeclarationToModule,
   addExportToModule,
   addImportToModule,
+  addProviderToComponent,
   addProviderToModule,
+  replaceImport,
+  containsProperty,
 } from './utility/ast-utils';
 
 export {
@@ -32,9 +38,12 @@ export {
   ReplaceChange,
   createReplaceChange,
   createChangeRecorder,
+  commitChanges,
 } from './utility/change';
 
 export { AppConfig, getWorkspace, getWorkspacePath } from './utility/config';
+
+export { findComponentFromOptions } from './utility/find-component';
 
 export {
   findModule,
@@ -42,6 +51,8 @@ export {
   buildRelativePath,
   ModuleOptions,
 } from './utility/find-module';
+
+export { findPropertyInAstObject } from './utility/json-utilts';
 
 export {
   addReducerToState,
@@ -62,6 +73,7 @@ export const stringUtils = {
   group,
   capitalize,
   featurePath,
+  pluralize,
 };
 
 export { updatePackage } from './utility/update';
@@ -71,3 +83,13 @@ export { parseName } from './utility/parse-name';
 export { addPackageToPackageJson } from './utility/package';
 
 export { platformVersion } from './utility/libs-version';
+
+export {
+  visitTSSourceFiles,
+  visitNgModuleImports,
+  visitNgModuleExports,
+  visitComponents,
+  visitDecorator,
+  visitNgModules,
+  visitTemplates,
+} from './utility/visitors';

@@ -7,7 +7,7 @@ import { Schema as DataEntityOptions } from './schema';
 import {
   createWorkspace,
   getTestProjectPath,
-} from '../../../schematics-core/testing';
+} from '@ngrx/schematics-core/testing';
 
 describe('Data ng-add Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
@@ -24,88 +24,140 @@ describe('Data ng-add Schematic', () => {
 
   let appTree: UnitTestTree;
 
-  beforeEach(() => {
-    appTree = createWorkspace(schematicRunner, appTree);
+  beforeEach(async () => {
+    appTree = await createWorkspace(schematicRunner, appTree);
   });
 
-  it('should update package.json', () => {
+  it('should update package.json', async () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
     const packageJson = JSON.parse(tree.readContent('/package.json'));
 
     expect(packageJson.dependencies['@ngrx/data']).toBeDefined();
   });
 
-  it('should skip package.json update', () => {
+  it('should skip package.json update', async () => {
     const options = { ...defaultOptions, skipPackageJson: true };
 
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
     const packageJson = JSON.parse(tree.readContent('/package.json'));
 
     expect(packageJson.dependencies['@ngrx/data']).toBeUndefined();
   });
 
-  it('should import into a specified module', () => {
+  it('should import into a specified module', async () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(/import { EntityDataModule } from '@ngrx\/data'/);
   });
 
-  it('should fail if specified module does not exist', () => {
+  it('should fail if specified module does not exist', async () => {
     const options = {
       ...defaultOptions,
       module: `${projectPath}/src/app/app.moduleXXX.ts`,
     };
     let thrownError: Error | null = null;
     try {
-      schematicRunner.runSchematic('data', options, appTree);
+      await schematicRunner.runSchematicAsync('data', options, appTree);
     } catch (err) {
       thrownError = err;
     }
     expect(thrownError).toBeDefined();
   });
 
-  it('should import EntityDataModuleWithoutEffects into a specified module', () => {
+  it('should add entity-metadata config to EntityDataModule', async () => {
+    const options = { ...defaultOptions, effects: false, entityConfig: true };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+    expect(content).toMatch(
+      /import { entityConfig } from '.\/entity-metadata'/
+    );
+    expect(content).toMatch(
+      /EntityDataModuleWithoutEffects.forRoot\(entityConfig\)/
+    );
+  });
+
+  it('should add entity-metadata config file', async () => {
+    const options = { ...defaultOptions, entityConfig: true };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
+    expect(
+      tree.files.indexOf(`${projectPath}/src/app/entity-metadata.ts`)
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should add entity-metadata config to EntityDataModule', async () => {
+    const options = { ...defaultOptions, entityConfig: true };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+    expect(content).toMatch(
+      /import { entityConfig } from '.\/entity-metadata'/
+    );
+    expect(content).toMatch(/EntityDataModule.forRoot\(entityConfig\)/);
+  });
+
+  it('should import EntityDataModuleWithoutEffects into a specified module', async () => {
     const options = {
       ...defaultOptions,
       module: 'app.module.ts',
       effects: false,
+      entityConfig: false,
     };
 
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(
       /import { EntityDataModuleWithoutEffects } from '@ngrx\/data'/
     );
   });
 
-  it('should register EntityDataModule in the provided module', () => {
-    const options = { ...defaultOptions };
+  it('should register EntityDataModule in the provided module', async () => {
+    const options = { ...defaultOptions, entityConfig: false };
 
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(/EntityDataModule\n/);
   });
 
-  it('should register EntityDataModuleWithoutEffects in the provided module', () => {
-    const options = { ...defaultOptions, effects: false };
+  it('should register EntityDataModuleWithoutEffects in the provided module', async () => {
+    const options = { ...defaultOptions, effects: false, entityConfig: false };
 
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('ng-add', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(/EntityDataModuleWithoutEffects\n/);
   });
 
-  describe('Migration of angular-ngrx-data', () => {
-    it('should remove angular-ngrx-data from package.json', () => {
+  describe('Migration of ngrx-data', () => {
+    it('should remove ngrx-data from package.json', async () => {
       const options = { ...defaultOptions, migrateNgrxData: true };
 
       const packageJsonBefore = JSON.parse(
         appTree.readContent('/package.json')
       );
-      packageJsonBefore['dependencies']['angular-ngrx-data'] = '1.0.0';
+      packageJsonBefore['dependencies']['ngrx-data'] = '1.0.0';
       appTree.overwrite(
         '/package.json',
         JSON.stringify(packageJsonBefore, null, 2)
@@ -113,17 +165,19 @@ describe('Data ng-add Schematic', () => {
 
       expect(
         JSON.parse(appTree.readContent('/package.json'))['dependencies'][
-          'angular-ngrx-data'
+          'ngrx-data'
         ]
       ).toBeDefined();
 
-      const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+      const tree = await schematicRunner
+        .runSchematicAsync('ng-add', options, appTree)
+        .toPromise();
       const packageJson = JSON.parse(tree.readContent('/package.json'));
 
-      expect(packageJson.dependencies['angular-ngrx-data']).not.toBeDefined();
+      expect(packageJson.dependencies['ngrx-data']).not.toBeDefined();
     });
 
-    it('should rename NgrxDataModule', () => {
+    it('should rename NgrxDataModule', async () => {
       const options = {
         ...defaultOptions,
         migrateNgrxData: true,
@@ -176,13 +230,15 @@ describe('Data ng-add Schematic', () => {
       `;
       appTree.create(dataModulePath, input);
 
-      const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+      const tree = await schematicRunner
+        .runSchematicAsync('ng-add', options, appTree)
+        .toPromise();
       const actual = tree.readContent(dataModulePath);
 
       expect(actual).toBe(output);
     });
 
-    it('should rename NgrxDataModuleWithoutEffects ', () => {
+    it('should rename NgrxDataModuleWithoutEffects ', async () => {
       const options = {
         ...defaultOptions,
         migrateNgrxData: true,
@@ -235,13 +291,15 @@ describe('Data ng-add Schematic', () => {
       `;
       appTree.create(dataModulePath, input);
 
-      const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+      const tree = await schematicRunner
+        .runSchematicAsync('ng-add', options, appTree)
+        .toPromise();
       const actual = tree.readContent(dataModulePath);
 
       expect(actual).toBe(output);
     });
 
-    it('should rename NgrxDataModuleConfig ', () => {
+    it('should rename NgrxDataModuleConfig ', async () => {
       const options = {
         ...defaultOptions,
         migrateNgrxData: true,
@@ -260,7 +318,7 @@ describe('Data ng-add Schematic', () => {
           NgrxDataModuleConfig,
           Pluralizer
         } from 'ngrx-data';
-        
+
         const customConfig: NgrxDataModuleConfig = {
           root: 'api', // default root path to the server's web api
           timeout: 3000, // request timeout
@@ -291,7 +349,7 @@ describe('Data ng-add Schematic', () => {
           EntityDataModuleConfig,
           Pluralizer
         } from '@ngrx/data';
-        
+
         const customConfig: EntityDataModuleConfig = {
           root: 'api', // default root path to the server's web api
           timeout: 3000, // request timeout
@@ -312,7 +370,9 @@ describe('Data ng-add Schematic', () => {
       `;
       appTree.create(dataModulePath, input);
 
-      const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+      const tree = await schematicRunner
+        .runSchematicAsync('ng-add', options, appTree)
+        .toPromise();
       const actual = tree.readContent(dataModulePath);
 
       expect(actual).toBe(output);

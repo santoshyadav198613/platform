@@ -4,7 +4,6 @@ import {
   ActionReducer,
   MetaReducer,
   Action,
-  combineReducers,
   ActionReducerMap,
 } from '@ngrx/store';
 import { environment } from '../../environments/environment';
@@ -25,7 +24,7 @@ import { InjectionToken } from '@angular/core';
  * our top level state interface is just a map of keys to inner state types.
  */
 export interface State {
-  layout: fromLayout.State;
+  [fromLayout.layoutFeatureKey]: fromLayout.State;
   router: fromRouter.RouterReducerState<any>;
 }
 
@@ -38,7 +37,7 @@ export const ROOT_REDUCERS = new InjectionToken<
   ActionReducerMap<State, Action>
 >('Root reducers token', {
   factory: () => ({
-    layout: fromLayout.reducer,
+    [fromLayout.layoutFeatureKey]: fromLayout.reducer,
     router: fromRouter.routerReducer,
   }),
 });
@@ -67,13 +66,22 @@ export const metaReducers: MetaReducer<State>[] = !environment.production
   : [];
 
 /**
- * Layout Reducers
+ * Layout Selectors
  */
-export const getLayoutState = createFeatureSelector<State, fromLayout.State>(
-  'layout'
+export const selectLayoutState = createFeatureSelector<fromLayout.State>(
+  fromLayout.layoutFeatureKey
 );
 
-export const getShowSidenav = createSelector(
-  getLayoutState,
-  fromLayout.getShowSidenav
+export const selectShowSidenav = createSelector(
+  selectLayoutState,
+  fromLayout.selectShowSidenav
 );
+
+/**
+ * Router Selectors
+ */
+export const selectRouter = createFeatureSelector<fromRouter.RouterReducerState>(
+  'router'
+);
+
+export const { selectRouteData } = fromRouter.getSelectors(selectRouter);

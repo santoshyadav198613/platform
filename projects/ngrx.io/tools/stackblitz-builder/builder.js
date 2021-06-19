@@ -161,7 +161,7 @@ class StackblitzBuilder {
         content = fs.readFileSync(fileName, 'utf-8');
       }
 
-      if (extn == '.js' || extn == '.ts' || extn == '.css') {
+      if (extn == '.js' || extn == '.ts' || extn == '.css' || extn == '.scss') {
         content = content + this.copyrights.jsCss;
       } else if (extn == '.html') {
         content = content + this.copyrights.html;
@@ -220,10 +220,8 @@ class StackblitzBuilder {
   }
 
   _encodeBase64(file) {
-    // read binary data
-    var bitmap = fs.readFileSync(file);
-    // convert binary data to base64 encoded string
-    return Buffer(bitmap).toString('base64');
+    // read binary data and convert binary data to base64 encoded string
+    return fs.readFileSync(file, { encoding: 'base64' });
   }
 
   _existsSync(filename) {
@@ -248,10 +246,10 @@ class StackblitzBuilder {
       var config = (configSrc && configSrc.trim().length) ? JSON.parse(configSrc) : {};
       config.basePath = configDir; // assumes 'stackblitz.json' is at `/src` level.
     } catch (e) {
-      throw new Error(`Stackblitz config - unable to parse json file: ${configFileName}\n${e}`);
+      throw new Error(`StackBlitz config - unable to parse JSON file: ${configFileName}\n${e}`);
     }
 
-    var defaultIncludes = ['**/*.ts', '**/*.js', '**/*.css', '**/*.html', '**/*.md', '**/*.json', '**/*.png'];
+    var defaultIncludes = ['**/*.ts', '**/*.js', '**/*.css', '**/*.scss', '**/*.html', '**/*.md', '**/*.json', '**/*.png'];
     var boilerplateIncludes = ['src/environments/*.*', 'angular.json', 'src/polyfills.ts'];
     if (config.files) {
       if (config.files.length > 0) {

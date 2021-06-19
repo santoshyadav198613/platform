@@ -1,6 +1,6 @@
-import { ErrorHandler, Injectable } from '@angular/core';
-import { Action, Store } from '@ngrx/store';
-import { Notification, Observable, Subject } from 'rxjs';
+import { ErrorHandler, Inject, Injectable } from '@angular/core';
+import { Action } from '@ngrx/store';
+import { Notification, Observable, Subject, merge } from 'rxjs';
 import {
   dematerialize,
   exhaustMap,
@@ -8,34 +8,39 @@ import {
   groupBy,
   map,
   mergeMap,
+  take,
 } from 'rxjs/operators';
 
-import { verifyOutput } from './effect_notification';
+import {
+  reportInvalidActions,
+  EffectNotification,
+} from './effect_notification';
+import { EffectsErrorHandler } from './effects_error_handler';
 import { mergeEffects } from './effects_resolver';
 import {
   onIdentifyEffectsKey,
   onRunEffectsKey,
-  onRunEffectsFn,
   OnRunEffects,
   onInitEffects,
+  isOnIdentifyEffects,
+  isOnRunEffects,
+  isOnInitEffects,
 } from './lifecycle_hooks';
+import { EFFECTS_ERROR_HANDLER } from './tokens';
 import { getSourceForInstance } from './utils';
 
 @Injectable()
 export class EffectSources extends Subject<any> {
-  constructor(private errorHandler: ErrorHandler, private store: Store<any>) {
+  constructor(
+    private errorHandler: ErrorHandler,
+    @Inject(EFFECTS_ERROR_HANDLER)
+    private effectsErrorHandler: EffectsErrorHandler
+  ) {
     super();
   }
 
-  addEffects(effectSourceInstance: any) {
+  addEffects(effectSourceInstance: any): void {
     this.next(effectSourceInstance);
-
-    if (
-      onInitEffects in effectSourceInstance &&
-      typeof effectSourceInstance[onInitEffects] === 'function'
-    ) {
-      this.store.dispatch(effectSourceInstance[onInitEffects]());
-    }
   }
 
   /**
@@ -44,53 +49,69 @@ export class EffectSources extends Subject<any> {
   toActions(): Observable<Action> {
     return this.pipe(
       groupBy(getSourceForInstance),
-      mergeMap(source$ => source$.pipe(groupBy(effectsInstance))),
-      mergeMap(source$ =>
-        source$.pipe(
-          exhaustMap(resolveEffectSource),
-          map(output => {
-            verifyOutput(output, this.errorHandler);
-
+      mergeMap((source$) => {
+        return source$.pipe(groupBy(effectsInstance));
+      }),
+      mergeMap((source$) => {
+        const effect$ = source$.pipe(
+          exhaustMap((sourceInstance) => {
+            return resolveEffectSource(
+              this.errorHandler,
+              this.effectsErrorHandler
+            )(sourceInstance);
+          }),
+          map((output) => {
+            reportInvalidActions(output, this.errorHandler);
             return output.notification;
           }),
           filter(
-            (notification): notification is Notification<Action> =>
-              notification.kind === 'N'
+            (
+              notification
+            ): notification is Notification<Action> & {
+              kind: 'N';
+              value: Action;
+            } => notification.kind === 'N' && notification.value != null
           ),
           dematerialize()
-        )
-      )
+        );
+
+        // start the stream with an INIT action
+        // do this only for the first Effect instance
+        const init$ = source$.pipe(
+          take(1),
+          filter(isOnInitEffects),
+          map((instance) => instance.ngrxOnInitEffects())
+        );
+
+        return merge(effect$, init$);
+      })
     );
   }
 }
 
 function effectsInstance(sourceInstance: any) {
-  if (
-    onIdentifyEffectsKey in sourceInstance &&
-    typeof sourceInstance[onIdentifyEffectsKey] === 'function'
-  ) {
-    return sourceInstance[onIdentifyEffectsKey]();
+  if (isOnIdentifyEffects(sourceInstance)) {
+    return sourceInstance.ngrxOnIdentifyEffects();
   }
 
   return '';
 }
 
-function resolveEffectSource(sourceInstance: any) {
-  const mergedEffects$ = mergeEffects(sourceInstance);
+function resolveEffectSource(
+  errorHandler: ErrorHandler,
+  effectsErrorHandler: EffectsErrorHandler
+): (sourceInstance: any) => Observable<EffectNotification> {
+  return (sourceInstance) => {
+    const mergedEffects$ = mergeEffects(
+      sourceInstance,
+      errorHandler,
+      effectsErrorHandler
+    );
 
-  if (isOnRunEffects(sourceInstance)) {
-    return sourceInstance.ngrxOnRunEffects(mergedEffects$);
-  }
+    if (isOnRunEffects(sourceInstance)) {
+      return sourceInstance.ngrxOnRunEffects(mergedEffects$);
+    }
 
-  return mergedEffects$;
-}
-
-function isOnRunEffects(sourceInstance: {
-  [onRunEffectsKey]?: onRunEffectsFn;
-}): sourceInstance is OnRunEffects {
-  const source = getSourceForInstance(sourceInstance);
-
-  return (
-    onRunEffectsKey in source && typeof source[onRunEffectsKey] === 'function'
-  );
+    return mergedEffects$;
+  };
 }

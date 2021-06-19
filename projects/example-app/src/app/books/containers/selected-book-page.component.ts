@@ -1,10 +1,11 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { Store, select } from '@ngrx/store';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+
+import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
 
-import * as fromBooks from '@example-app/books/reducers';
 import { SelectedBookPageActions } from '@example-app/books/actions';
-import { Book } from '@example-app/books/models/book';
+import { Book } from '@example-app/books/models';
+import * as fromBooks from '@example-app/books/reducers';
 
 @Component({
   selector: 'bc-selected-book-page',
@@ -14,7 +15,8 @@ import { Book } from '@example-app/books/models/book';
       [book]="book$ | async"
       [inCollection]="isSelectedBookInCollection$ | async"
       (add)="addToCollection($event)"
-      (remove)="removeFromCollection($event)">
+      (remove)="removeFromCollection($event)"
+    >
     </bc-book-detail>
   `,
 })
@@ -22,12 +24,10 @@ export class SelectedBookPageComponent {
   book$: Observable<Book>;
   isSelectedBookInCollection$: Observable<boolean>;
 
-  constructor(private store: Store<fromBooks.State>) {
-    this.book$ = store.pipe(select(fromBooks.getSelectedBook)) as Observable<
-      Book
-    >;
-    this.isSelectedBookInCollection$ = store.pipe(
-      select(fromBooks.isSelectedBookInCollection)
+  constructor(private store: Store) {
+    this.book$ = store.select(fromBooks.selectSelectedBook) as Observable<Book>;
+    this.isSelectedBookInCollection$ = store.select(
+      fromBooks.isSelectedBookInCollection
     );
   }
 

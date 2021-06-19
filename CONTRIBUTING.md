@@ -12,6 +12,20 @@ yarn
 yarn test
 ```
 
+### Testing for a specific library
+
+```shell
+yarn nx test effects --watchAll
+yarn nx test <library name that matches angular.json entry> --watchAll
+```
+
+### Testing for a specific schematic unit test
+
+```shell
+yarn jest modules/schematics/src/effect/index.spec.ts --watch
+yarn jest <relative path> --watch
+```
+
 ## Submitting Pull Requests
 
 **Please follow these basic steps to simplify pull request reviews. If you don't you'll probably just be asked to anyway.**
@@ -40,7 +54,7 @@ yarn test
 
 We have very precise rules over how our git commit messages can be formatted. This leads to **more
 readable messages** that are easy to follow when looking through the **project history**. But also,
-we use the git commit messages to **generate the NgRx change log**.
+we use the git commit messages to **generate the NgRx changelog**.
 
 ### Commit Message Format
 
@@ -57,7 +71,7 @@ format that includes a **type**, a **scope** and a **subject**:
 
 The **header** is mandatory and the **scope** of the header is optional.
 
-Any line of the commit message cannot be longer 100 characters! This allows the message to be easier
+Any line of the commit message cannot be longer than 100 characters! This allows the message to be easier
 to read on GitHub as well as in various git tools.
 
 The footer should contain a [closing reference to an issue](https://help.github.com/articles/closing-issues-via-commit-messages/) if any.
@@ -89,7 +103,7 @@ Must be one of the following:
 - **fix**: A bug fix
 - **perf**: A code change that improves performance
 - **refactor**: A code change that neither fixes a bug nor adds a feature
-- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc.)
 - **test**: Adding missing tests or correcting existing tests
 
 ### Scope
@@ -98,6 +112,8 @@ The scope should be the name of the npm package affected (as perceived by the pe
 
 The following is the list of supported scopes:
 
+- **component**
+- **component-store**
 - **data**
 - **effects**
 - **entity**

@@ -1,9 +1,4 @@
-import { Action } from '@ngrx/store';
 import { Update } from '@ngrx/entity';
-
-import { EntityActionOptions } from './entity-action';
-import { EntityCacheAction } from './entity-cache-action';
-import { DataServiceError } from '../dataservices/data-service-error';
 
 export enum ChangeSetOperation {
   Add = 'Add',
@@ -53,7 +48,7 @@ export interface ChangeSet<T = any> {
 
   /**
    * An arbitrary, serializable object that should travel with the ChangeSet.
-   * Meaningful to the ChangeSet producer and consumer. Ignored by ngrx-data.
+   * Meaningful to the ChangeSet producer and consumer. Ignored by @ngrx/data.
    */
   extras?: T;
 
@@ -79,13 +74,13 @@ export class ChangeSetItemFactory {
     const ids = Array.isArray(keys)
       ? keys
       : keys
-        ? ([keys] as string[] | number[])
-        : [];
+      ? ([keys] as string[] | number[])
+      : [];
     return { entityName, op: ChangeSetOperation.Delete, entities: ids };
   }
 
   /** Create the ChangeSetUpdate for Updates of entities of the given entity type */
-  update<T extends { id: string }>(
+  update<T extends { id: string | number }>(
     entityName: string,
     updates: Update<T> | Update<T>[]
   ): ChangeSetUpdate<T> {
@@ -112,7 +107,7 @@ export const changeSetItemFactory = new ChangeSetItemFactory();
 export function excludeEmptyChangeSetItems(changeSet: ChangeSet): ChangeSet {
   changeSet = changeSet && changeSet.changes ? changeSet : { changes: [] };
   const changes = changeSet.changes.filter(
-    c => c != null && c.entities && c.entities.length > 0
+    (c) => c != null && c.entities && c.entities.length > 0
   );
   return { ...changeSet, changes };
 }

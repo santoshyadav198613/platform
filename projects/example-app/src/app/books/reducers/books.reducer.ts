@@ -1,12 +1,15 @@
 import { createEntityAdapter, EntityAdapter, EntityState } from '@ngrx/entity';
-import { Book } from '@example-app/books/models/book';
-import {
-  BooksApiActions,
-  BookActions,
-  ViewBookPageActions,
-  CollectionApiActions,
-} from '@example-app/books/actions';
 import { createReducer, on } from '@ngrx/store';
+
+import {
+  BookActions,
+  BooksApiActions,
+  CollectionApiActions,
+  ViewBookPageActions,
+} from '@example-app/books/actions';
+import { Book } from '@example-app/books/models';
+
+export const booksFeatureKey = 'books';
 
 /**
  * @ngrx/entity provides a predefined interface for handling
@@ -41,34 +44,32 @@ export const initialState: State = adapter.getInitialState({
   selectedBookId: null,
 });
 
-export const reducer = createReducer<State>(
-  [
-    /**
-     * The addMany function provided by the created adapter
-     * adds many records to the entity dictionary
-     * and returns a new state including those records. If
-     * the collection is to be sorted, the adapter will
-     * sort each record upon entry into the sorted array.
-     */
-    on(
-      BooksApiActions.searchSuccess,
-      CollectionApiActions.loadBooksSuccess,
-      (state, { books }) => adapter.addMany(books, state)
-    ),
-    /**
-     * The addOne function provided by the created adapter
-     * adds one record to the entity dictionary
-     * and returns a new state including that records if it doesn't
-     * exist already. If the collection is to be sorted, the adapter will
-     * insert the new record into the sorted array.
-     */
-    on(BookActions.loadBook, (state, { book }) => adapter.addOne(book, state)),
-    on(ViewBookPageActions.selectBook, (state, { id }) => ({
-      ...state,
-      selectedBookId: id,
-    })),
-  ],
-  initialState
+export const reducer = createReducer(
+  initialState,
+  /**
+   * The addMany function provided by the created adapter
+   * adds many records to the entity dictionary
+   * and returns a new state including those records. If
+   * the collection is to be sorted, the adapter will
+   * sort each record upon entry into the sorted array.
+   */
+  on(
+    BooksApiActions.searchSuccess,
+    CollectionApiActions.loadBooksSuccess,
+    (state, { books }) => adapter.addMany(books, state)
+  ),
+  /**
+   * The addOne function provided by the created adapter
+   * adds one record to the entity dictionary
+   * and returns a new state including that records if it doesn't
+   * exist already. If the collection is to be sorted, the adapter will
+   * insert the new record into the sorted array.
+   */
+  on(BookActions.loadBook, (state, { book }) => adapter.addOne(book, state)),
+  on(ViewBookPageActions.selectBook, (state, { id }) => ({
+    ...state,
+    selectedBookId: id,
+  }))
 );
 
 /**
@@ -80,4 +81,4 @@ export const reducer = createReducer<State>(
  * use-case.
  */
 
-export const getSelectedId = (state: State) => state.selectedBookId;
+export const selectId = (state: State) => state.selectedBookId;

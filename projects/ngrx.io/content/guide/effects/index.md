@@ -1,4 +1,4 @@
-# Effects
+# @ngrx/effects
 
 Effects are an RxJS powered side effect model for [Store](guide/store). Effects use streams to provide [new sources](https://martinfowler.com/eaaDev/EventSourcing.html) of actions to reduce state based on external interactions such as network requests, web socket messages and time-based events.
 
@@ -13,13 +13,13 @@ In a service-based Angular application, components are responsible for interacti
 - Effects filter those actions based on the type of action they are interested in. This is done by using an operator.
 - Effects perform tasks, which are synchronous or asynchronous and return a new action.
 
-## Installation 
+## Installation
 
 Detailed installation instructions can be found on the [Installation](guide/effects/install) page.
 
 ## Comparison with component-based side effects
 
-In a service-based application, your components interact with data through many different services that expose data through properties and methods. These services may depend on other services that manage other sets of data. Your components consume these services to perform tasks, giving your components many responsibilities. 
+In a service-based application, your components interact with data through many different services that expose data through properties and methods. These services may depend on other services that manage other sets of data. Your components consume these services to perform tasks, giving your components many responsibilities.
 
 Imagine that your application manages movies. Here is a component that fetches and displays a list of movies.
 
@@ -60,10 +60,10 @@ export class MoviesService {
 The component has multiple responsibilities:
 
 - Managing the _state_ of the movies.
-- Using the service to perform a _side effect_, reaching out to an external API to fetch the movies
+- Using the service to perform a _side effect_, reaching out to an external API to fetch the movies.
 - Changing the _state_ of the movies within the component.
 
-`Effects` when used along with `Store`, decrease the responsibility of the component.  In a larger application, this becomes more important because you have multiple sources of data, with multiple services required to fetch those pieces of data, and services potentially relying on other services.
+`Effects` when used along with `Store`, decrease the responsibility of the component. In a larger application, this becomes more important because you have multiple sources of data, with multiple services required to fetch those pieces of data, and services potentially relying on other services.
 
 Effects handle external data and interactions, allowing your services to be less stateful and only perform tasks related to external interactions. Next, refactor the component to put the shared movie data in the `Store`. Effects handle the fetching of movie data.
 
@@ -76,7 +76,7 @@ Effects handle external data and interactions, allowing your services to be less
   `
 })
 export class MoviesPageComponent {
-  movies$: Observable<Movie[]> = this.store.select(state => state.movies);
+  movies$: Observable&lt;Movie[]&gt; = this.store.select(state => state.movies);
 
   constructor(private store: Store&lt;{ movies: Movie[] }&gt;) {}
 
@@ -90,23 +90,24 @@ The movies are still fetched through the `MoviesService`, but the component is n
 
 ## Writing Effects
 
-To isolate side-effects from your component, you must create an `Effects` class to listen for events and perform tasks. 
+To isolate side-effects from your component, you must create an `Effects` class to listen for events and perform tasks.
 
 Effects are injectable service classes with distinct parts:
 
 - An injectable `Actions` service that provides an observable stream of _all_ actions dispatched _after_ the latest state has been reduced.
 - Metadata is attached to the observable streams using the `createEffect` function. The metadata is used to register the streams that are subscribed to the store. Any action returned from the effect stream is then dispatched back to the `Store`.
-- Actions are filtered using a pipeable `ofType` operator. The `ofType` operator takes one more action types as arguments to filter on which actions to act upon.
-- Effects are subscribed to the `Store` observable. 
+- Actions are filtered using a pipeable [`ofType` operator](guide/effects/operators#oftype). The `ofType` operator takes one or more action types as arguments to filter on which actions to act upon.
+- Effects are subscribed to the `Store` observable.
 - Services are injected into effects to interact with external APIs and handle streams.
 
 To show how you handle loading movies from the example above, let's look at `MovieEffects`.
 
 <code-example header="movie.effects.ts">
 import { Injectable } from '@angular/core';
-import { Actions, Effect, ofType } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { EMPTY } from 'rxjs';
-import { map, mergeMap } from 'rxjs/operators';
+import { map, mergeMap, catchError } from 'rxjs/operators';
+import { MoviesService } from './movies.service';
 
 @Injectable()
 export class MovieEffects {
@@ -128,7 +129,7 @@ export class MovieEffects {
 }
 </code-example>
 
-The `loadMovies$` effect is listening for all dispatched actions through the `Actions` stream, but is only interested in the `[Movies Page] Load Movies` event using the `ofType` operator. The stream of actions is then flattened and mapped into a new observable using the `mergeMap` operator. The `MoviesService#getAll()` method returns an observable that maps the movies to a new action on success, and currently returns an empty observable if an error occurs. The action is dispatched to the `Store` where it can be handled by reducers when a state change is needed. Its also important to [handle errors](#handling-errors) when dealing with observable streams so that the effects continue running.
+The `loadMovies$` effect is listening for all dispatched actions through the `Actions` stream, but is only interested in the `[Movies Page] Load Movies` event using the `ofType` operator. The stream of actions is then flattened and mapped into a new observable using the `mergeMap` operator. The `MoviesService#getAll()` method returns an observable that maps the movies to a new action on success, and currently returns an empty observable if an error occurs. The action is dispatched to the `Store` where it can be handled by reducers when a state change is needed. It's also important to [handle errors](#handling-errors) when dealing with observable streams so that the effects continue running.
 
 <div class="alert is-important">
 
@@ -138,7 +139,7 @@ The `loadMovies$` effect is listening for all dispatched actions through the `Ac
 
 <div class="alert is-important">
 
-**Note:** You can also write effects using the `@Effect()` decorator, which was the previously defined way before effects creators were introduced in NgRx. If 
+**Note:** You can also write effects using the `@Effect()` decorator, which was the previously defined way before effects creators were introduced in NgRx. If
 you are looking for examples of effect decorators, visit the documentation for [versions 7.x and prior](https://v7.ngrx.io/guide/effects#writing-effects).
 
 </div>
@@ -149,14 +150,15 @@ Effects are built on top of observable streams provided by RxJS. Effects are lis
 
 <code-example header="movie.effects.ts">
 import { Injectable } from '@angular/core';
-import { Actions, Effect, ofType } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
-import { map, mergeMap } from 'rxjs/operators';
+import { map, mergeMap, catchError } from 'rxjs/operators';
+import { MoviesService } from './movies.service';
 
 @Injectable()
 export class MovieEffects {
 
-  loadMovies$ = createEffect(() => 
+  loadMovies$ = createEffect(() =>
     this.actions$.pipe(
       ofType('[Movies Page] Load Movies'),
       mergeMap(() => this.moviesService.getAll()
@@ -174,7 +176,6 @@ export class MovieEffects {
   ) {}
 }
 </code-example>
-
 
 The `loadMovies$` effect returns a new observable in case an error occurs while fetching movies. The inner observable handles any errors or completions and returns a new observable so that the outer stream does not die. You still use the `catchError` operator to handle error events, but return an observable of a new action that is dispatched to the `Store`.
 
@@ -204,7 +205,7 @@ Effects start running immediately after the AppModule is loaded to ensure they a
 
 ## Registering feature effects
 
-For feature modules, register your effects by adding the `EffectsModule.forFeature()` method in the `imports` array of your `NgModule`. 
+For feature modules, register your effects by adding the `EffectsModule.forFeature()` method in the `imports` array of your `NgModule`.
 
 <code-example header="admin.module.ts">
 import { EffectsModule } from '@ngrx/effects';
@@ -221,6 +222,27 @@ export class MovieModule {}
 <div class="alert is-important">
 
 **Note:** Running an effects class multiple times, either by `forRoot()` or `forFeature()`, (for example via different lazy loaded modules) will not cause Effects to run multiple times. There is no functional difference between effects loaded by `forRoot()` and `forFeature()`; the important difference between the functions is that `forRoot()` sets up the providers required for effects.
+
+</div>
+
+## Alternative way of registering effects
+
+You can provide root-/feature-level effects with the provider `USER_PROVIDED_EFFECTS`.
+
+<code-example header="movies.module.ts">
+providers: [
+  MovieEffects,
+  {
+    provide: USER_PROVIDED_EFFECTS,
+    multi: true,
+    useValue: [MovieEffects],
+  },
+]
+</code-example>
+
+<div class="alert is-critical">
+
+The `EffectsModule.forFeature()` method must be added to the module imports even if you only provide effects over token, and don't pass them via parameters. (Same goes for `EffectsModule.forRoot()`)
 
 </div>
 
@@ -275,16 +297,15 @@ export class AuthEffects {
 
 The `login` action has additional `credentials` metadata which is passed to a service to log the specific user into the application.
 
-However, there may be cases when the required metadata is only accessible from state.  When state is needed, the RxJS `withLatestFrom` operator can be used to provide it.
+However, there may be cases when the required metadata is only accessible from state.  When state is needed, the RxJS `withLatestFrom` or the @ngrx/effects `concatLatestFrom` operators can be used to provide it.
 
 The example below shows the `addBookToCollectionSuccess$` effect displaying a different alert depending on the number of books in the collection state.
 
 <code-example header="collection.effects.ts">
 import { Injectable } from '@angular/core';
-import { Store, select } from '@ngrx/store';
-import { Actions, ofType, createEffect } from '@ngrx/effects';
-import { of } from 'rxjs';
-import { tap, concatMap, withLatestFrom } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
+import { Actions, ofType, createEffect, concatLatestFrom } from '@ngrx/effects';
+import { tap } from 'rxjs/operators';
 import { CollectionApiActions } from '../actions';
 import * as fromBooks from '../reducers';
 
@@ -294,9 +315,7 @@ export class CollectionEffects {
     () =>
       this.actions$.pipe(
         ofType(CollectionApiActions.addBookSuccess),
-        concatMap(action => of(action).pipe(
-          withLatestFrom(this.store.pipe(select(fromBooks.getCollectionBookIds)))
-        )),
+        concatLatestFrom(action => this.store.select(fromBooks.getCollectionBookIds)),
         tap(([action, bookCollection]) => {
           if (bookCollection.length === 1) {
             window.alert('Congrats on adding your first book!');
@@ -317,8 +336,8 @@ export class CollectionEffects {
 
 <div class="alert is-important">
 
-**Note:** For performance reasons, use a flattening operator in combination with `withLatestFrom` to prevent the selector from firing until the correct action is dispatched.
+**Note:** For performance reasons, use a flattening operator like `concatLatestFrom` to prevent the selector from firing until the correct action is dispatched.
 
 </div>
 
-To learn about testing effects that incorporate state, see the [Effects that use State](guide/effects/testing#effects-that-use-state) section in the testing guide.
+To learn about testing effects that incorporate state, see the [Effects that use State](guide/effects/testing#effect-that-uses-state) section in the testing guide.

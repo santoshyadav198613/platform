@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
-import { Book } from '@example-app/books/models/book';
+
+import { Book } from '@example-app/books/models';
 
 @Component({
   selector: 'bc-book-preview-list',
@@ -17,5 +18,5 @@ import { Book } from '@example-app/books/models/book';
   ],
 })
 export class BookPreviewListComponent {
-  @Input() books: Book[];
+  @Input() books!: Book[];
 }

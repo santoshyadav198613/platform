@@ -3,12 +3,7 @@ import { select, Store, StoreModule } from '@ngrx/store';
 
 import { todoCount, todos } from './fixtures/edge_todos';
 
-interface TestAppSchema {
-  counter1: number;
-  counter2: number;
-  counter3: number;
-}
-
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface Todo {}
 
 interface TodoAppSchema {
@@ -27,7 +22,7 @@ describe('ngRx Store', () => {
         ],
       });
 
-      store = TestBed.get(Store);
+      store = TestBed.inject(Store);
     });
 
     it('should provide an Observable Store', () => {
@@ -38,12 +33,12 @@ describe('ngRx Store', () => {
       let todosNextCount = 0;
       let todosCountNextCount = 0;
 
-      store.pipe(select('todos')).subscribe(todos => {
+      store.pipe(select('todos')).subscribe((todos) => {
         todosNextCount++;
         store.dispatch({ type: 'SET_COUNT', payload: todos.length });
       });
 
-      store.pipe(select('todoCount')).subscribe(count => {
+      store.pipe(select('todoCount')).subscribe((count) => {
         todosCountNextCount++;
       });
 

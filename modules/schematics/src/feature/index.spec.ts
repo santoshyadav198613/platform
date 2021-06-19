@@ -9,7 +9,7 @@ import {
   createWorkspace,
   defaultWorkspaceOptions,
   defaultAppOptions,
-} from '../../../schematics-core/testing';
+} from '@ngrx/schematics-core/testing';
 
 describe('Feature Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
@@ -20,7 +20,6 @@ describe('Feature Schematic', () => {
     name: 'foo',
     project: 'bar',
     module: '',
-    spec: true,
     group: false,
   };
 
@@ -28,17 +27,22 @@ describe('Feature Schematic', () => {
 
   let appTree: UnitTestTree;
 
-  beforeEach(() => {
-    appTree = createWorkspace(schematicRunner, appTree);
+  beforeEach(async () => {
+    appTree = await createWorkspace(schematicRunner, appTree);
   });
 
-  it('should create all files of a feature', () => {
+  it('should create all files of a feature', async () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${projectPath}/src/app/foo.actions.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.actions.spec.ts`)
     ).toBeGreaterThanOrEqual(0);
     expect(
       files.indexOf(`${projectPath}/src/app/foo.reducer.ts`)
@@ -52,9 +56,48 @@ describe('Feature Schematic', () => {
     expect(
       files.indexOf(`${projectPath}/src/app/foo.effects.spec.ts`)
     ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.selectors.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.selectors.spec.ts`)
+    ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should create all files of a feature to specified project if provided', () => {
+  it('should not create test files', async () => {
+    const options = { ...defaultOptions, skipTests: true };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
+    const files = tree.files;
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.actions.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf(`${projectPath}/src/app/foo.actions.spec.ts`)).toEqual(
+      -1
+    );
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.reducer.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf(`${projectPath}/src/app/foo.reducer.spec.ts`)).toEqual(
+      -1
+    );
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.effects.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf(`${projectPath}/src/app/foo.effects.spec.ts`)).toEqual(
+      -1
+    );
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.selectors.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${projectPath}/src/app/foo.selectors.spec.ts`)
+    ).toEqual(-1);
+  });
+
+  it('should create all files of a feature to specified project if provided', async () => {
     const options = {
       ...defaultOptions,
       project: 'baz',
@@ -65,10 +108,15 @@ describe('Feature Schematic', () => {
       name: 'baz',
     });
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${specifiedProjectPath}/src/lib/foo.actions.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${specifiedProjectPath}/src/lib/foo.actions.spec.ts`)
     ).toBeGreaterThanOrEqual(0);
     expect(
       files.indexOf(`${specifiedProjectPath}/src/lib/foo.reducer.ts`)
@@ -82,12 +130,20 @@ describe('Feature Schematic', () => {
     expect(
       files.indexOf(`${specifiedProjectPath}/src/lib/foo.effects.spec.ts`)
     ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${specifiedProjectPath}/src/lib/foo.selectors.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${specifiedProjectPath}/src/lib/foo.selectors.spec.ts`)
+    ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should create all files of a feature within grouped folders if group is set', () => {
+  it('should create all files of a feature within grouped folders if group is set', async () => {
     const options = { ...defaultOptions, group: true };
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const files = tree.files;
     expect(
       files.indexOf(`${projectPath}/src/app/actions/foo.actions.ts`)
@@ -104,9 +160,15 @@ describe('Feature Schematic', () => {
     expect(
       files.indexOf(`${projectPath}/src/app/effects/foo.effects.spec.ts`)
     ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${projectPath}/src/app/selectors/foo.selectors.ts`)
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      files.indexOf(`${projectPath}/src/app/selectors/foo.selectors.spec.ts`)
+    ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should respect the path provided for the feature name', () => {
+  it('should respect the path provided for the feature name', async () => {
     const options = {
       ...defaultOptions,
       name: 'foo/Foo',
@@ -114,26 +176,31 @@ describe('Feature Schematic', () => {
       module: 'app',
     };
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const moduleFileContent = tree.readContent(
       `${projectPath}/src/app/app.module.ts`
     );
 
     expect(moduleFileContent).toMatch(
-      /import { FooEffects } from '\.\/foo\/effects\/foo.effects';/
+      /import { FooEffects } from '.\/foo\/effects\/foo.effects';/
     );
     expect(moduleFileContent).toMatch(
-      /import \* as fromFoo from '\.\/foo\/reducers\/foo.reducer';/
+      /import \* as fromFoo from '.\/foo\/reducers\/foo.reducer';/
     );
   });
 
-  it('should have all three api actions in actions type union if api flag enabled', () => {
+  it('should have all three api actions in actions type union if api flag enabled and creators=false', async () => {
     const options = {
       ...defaultOptions,
       api: true,
+      creators: false,
     };
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const fileContent = tree.readContent(
       `${projectPath}/src/app/foo.actions.ts`
     );
@@ -143,53 +210,65 @@ describe('Feature Schematic', () => {
     );
   });
 
-  it('should have all api effect if api flag enabled', () => {
+  it('should have all api effect if api flag enabled', async () => {
     const options = {
       ...defaultOptions,
       api: true,
     };
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const fileContent = tree.readContent(
       `${projectPath}/src/app/foo.effects.ts`
     );
 
     expect(fileContent).toMatch(
-      /import { Actions, Effect, ofType } from '@ngrx\/effects';/
+      /import { Actions, createEffect, ofType } from '@ngrx\/effects';/
     );
     expect(fileContent).toMatch(
       /import { catchError, map, concatMap } from 'rxjs\/operators';/
     );
-    expect(fileContent).toMatch(/import { EMPTY, of } from 'rxjs';/);
     expect(fileContent).toMatch(
-      /import { LoadFoosFailure, LoadFoosSuccess, FooActionTypes, FooActions } from '\.\/foo.actions';/
+      /import { Observable, EMPTY, of } from 'rxjs';/
+    );
+    expect(fileContent).toMatch(
+      /import \* as FooActions from '.\/foo.actions';/
     );
 
     expect(fileContent).toMatch(/export class FooEffects/);
-    expect(fileContent).toMatch(/loadFoos\$ = this\.actions\$.pipe\(/);
-    expect(fileContent).toMatch(/ofType\(FooActionTypes\.LoadFoos\),/);
+    expect(fileContent).toMatch(/loadFoos\$ = createEffect\(\(\) => {/);
+    expect(fileContent).toMatch(/return this.actions\$.pipe\(/);
+    expect(fileContent).toMatch(/ofType\(FooActions.loadFoos\),/);
     expect(fileContent).toMatch(/concatMap\(\(\) =>/);
-    expect(fileContent).toMatch(/EMPTY\.pipe\(/);
+    expect(fileContent).toMatch(/EMPTY.pipe\(/);
     expect(fileContent).toMatch(
-      /map\(data => new LoadFoosSuccess\({ data }\)\),/
+      /map\(data => FooActions.loadFoosSuccess\({ data }\)\),/
     );
     expect(fileContent).toMatch(
-      /catchError\(error => of\(new LoadFoosFailure\({ error }\)\)\)\)/
+      /catchError\(error => of\(FooActions.loadFoosFailure\({ error }\)\)\)\)/
     );
   });
 
-  it('should have all api actions in reducer if api flag enabled', () => {
+  it('should have all api actions in reducer if api flag enabled', async () => {
     const options = {
       ...defaultOptions,
       api: true,
     };
 
-    const tree = schematicRunner.runSchematic('feature', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('feature', options, appTree)
+      .toPromise();
     const fileContent = tree.readContent(
       `${projectPath}/src/app/foo.reducer.ts`
     );
 
-    expect(fileContent).toMatch(/case FooActionTypes\.LoadFoosSuccess/);
-    expect(fileContent).toMatch(/case FooActionTypes\.LoadFoosFailure/);
+    expect(fileContent).toMatch(/on\(FooActions.loadFoos, state => state\),/);
+    expect(fileContent).toMatch(
+      /on\(FooActions.loadFoosSuccess, \(state, action\) => state\),/
+    );
+    expect(fileContent).toMatch(
+      /on\(FooActions.loadFoosFailure, \(state, action\) => state\),/
+    );
   });
 });

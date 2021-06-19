@@ -4,6 +4,7 @@ import {
   ModuleWithProviders,
   NgModule,
   ErrorHandler,
+  isDevMode,
 } from '@angular/core';
 import {
   NavigationCancel,
@@ -15,7 +16,14 @@ import {
   Event,
   RouterEvent,
 } from '@angular/router';
-import { select, Selector, Store } from '@ngrx/store';
+import {
+  isNgrxMockEnvironment,
+  RuntimeChecks,
+  select,
+  Selector,
+  Store,
+  ACTIVE_RUNTIME_CHECKS,
+} from '@ngrx/store';
 import { withLatestFrom } from 'rxjs/operators';
 
 import {
@@ -27,15 +35,27 @@ import {
 } from './actions';
 import { RouterReducerState } from './reducer';
 import {
-  DefaultRouterStateSerializer,
   RouterStateSerializer,
-  SerializedRouterStateSnapshot,
   BaseRouterStoreState,
-} from './serializer';
+} from './serializers/base';
+import {
+  DefaultRouterStateSerializer,
+  SerializedRouterStateSnapshot,
+} from './serializers/default_serializer';
+import { MinimalRouterStateSerializer } from './serializers/minimal_serializer';
 
 export type StateKeyOrSelector<
   T extends BaseRouterStoreState = SerializedRouterStateSnapshot
 > = string | Selector<any, RouterReducerState<T>>;
+
+/**
+ * Full = Serializes the router event with DefaultRouterStateSerializer
+ * Minimal = Serializes the router event with MinimalRouterStateSerializer
+ */
+export const enum RouterState {
+  Full,
+  Minimal,
+}
 
 export interface StoreRouterConfig<
   T extends BaseRouterStoreState = SerializedRouterStateSnapshot
@@ -50,6 +70,12 @@ export interface StoreRouterConfig<
    * set this property to NavigationActionTiming.PostActivation.
    */
   navigationActionTiming?: NavigationActionTiming;
+  /**
+   * Decides which router serializer should be used, if there is none provided, and the metadata on the dispatched @ngrx/router-store action payload.
+   * Set to `Full` to use the `DefaultRouterStateSerializer` and to set the angular router events as payload.
+   * Set to `Minimal` to use the `MinimalRouterStateSerializer` and to set a minimal router event with the navigation id and url as payload.
+   */
+  routerState?: RouterState;
 }
 
 interface StoreRouterActionPayload {
@@ -76,7 +102,7 @@ export function _createRouterConfig(
 ): StoreRouterConfig {
   return {
     stateKey: DEFAULT_ROUTER_FEATURENAME,
-    serializer: DefaultRouterStateSerializer,
+    serializer: MinimalRouterStateSerializer,
     navigationActionTiming: NavigationActionTiming.PreActivation,
     ...config,
   };
@@ -132,6 +158,12 @@ enum RouterTrigger {
  */
 @NgModule({})
 export class StoreRouterConnectingModule {
+  private lastEvent: Event | null = null;
+  private routerState: SerializedRouterStateSnapshot | null = null;
+  private storeState: any;
+  private trigger = RouterTrigger.NONE;
+  private stateKey: StateKeyOrSelector;
+
   static forRoot<
     T extends BaseRouterStoreState = SerializedRouterStateSnapshot
   >(
@@ -150,27 +182,40 @@ export class StoreRouterConnectingModule {
           provide: RouterStateSerializer,
           useClass: config.serializer
             ? config.serializer
-            : DefaultRouterStateSerializer,
+            : config.routerState === RouterState.Full
+            ? DefaultRouterStateSerializer
+            : MinimalRouterStateSerializer,
         },
       ],
     };
   }
-
-  private lastEvent: Event | null = null;
-  private routerState: SerializedRouterStateSnapshot | null;
-  private storeState: any;
-  private trigger = RouterTrigger.NONE;
-
-  private stateKey: StateKeyOrSelector;
 
   constructor(
     private store: Store<any>,
     private router: Router,
     private serializer: RouterStateSerializer<SerializedRouterStateSnapshot>,
     private errorHandler: ErrorHandler,
-    @Inject(ROUTER_CONFIG) private config: StoreRouterConfig
+    @Inject(ROUTER_CONFIG) private config: StoreRouterConfig,
+    @Inject(ACTIVE_RUNTIME_CHECKS) private activeRuntimeChecks: RuntimeChecks
   ) {
     this.stateKey = this.config.stateKey as StateKeyOrSelector;
+
+    if (
+      !isNgrxMockEnvironment() &&
+      isDevMode() &&
+      (activeRuntimeChecks?.strictActionSerializability ||
+        activeRuntimeChecks?.strictStateSerializability) &&
+      this.serializer instanceof DefaultRouterStateSerializer
+    ) {
+      console.warn(
+        '@ngrx/router-store: The serializability runtime checks cannot be enabled ' +
+          'with the DefaultRouterStateSerializer. The default serializer ' +
+          'has an unserializable router state and actions that are not serializable. ' +
+          'To use the serializability runtime checks either use ' +
+          'the MinimalRouterStateSerializer or implement a custom router state serializer. ' +
+          'This also applies to Ivy with immutability runtime checks.'
+      );
+    }
 
     this.setUpStoreStateListener();
     this.setUpRouterEventsListener();
@@ -178,10 +223,7 @@ export class StoreRouterConnectingModule {
 
   private setUpStoreStateListener(): void {
     this.store
-      .pipe(
-        select(this.stateKey),
-        withLatestFrom(this.store)
-      )
+      .pipe(select(this.stateKey as any), withLatestFrom(this.store))
       .subscribe(([routerStoreState, storeState]) => {
         this.navigateIfNeeded(routerStoreState, storeState);
       });
@@ -202,10 +244,10 @@ export class StoreRouterConnectingModule {
     }
 
     const url = routerStoreState.state.url;
-    if (this.router.url !== url) {
+    if (!isSameUrl(this.router.url, url)) {
       this.storeState = storeState;
       this.trigger = RouterTrigger.STORE;
-      this.router.navigateByUrl(url).catch(error => {
+      this.router.navigateByUrl(url).catch((error) => {
         this.errorHandler.handleError(error);
       });
     }
@@ -307,6 +349,16 @@ export class StoreRouterConnectingModule {
         payload: {
           routerState: this.routerState,
           ...payload,
+          event:
+            this.config.routerState === RouterState.Full
+              ? payload.event
+              : {
+                  id: payload.event.id,
+                  url: payload.event.url,
+                  // safe, as it will just be `undefined` for non-NavigationEnd router events
+                  urlAfterRedirects: (payload.event as NavigationEnd)
+                    .urlAfterRedirects,
+                },
         },
       });
     } finally {
@@ -319,4 +371,18 @@ export class StoreRouterConnectingModule {
     this.storeState = null;
     this.routerState = null;
   }
+}
+
+/**
+ * Check if the URLs are matching. Accounts for the possibility of trailing "/" in url.
+ */
+function isSameUrl(first: string, second: string): boolean {
+  return stripTrailingSlash(first) === stripTrailingSlash(second);
+}
+
+function stripTrailingSlash(text: string): string {
+  if (text.length > 0 && text[text.length - 1] === '/') {
+    return text.substring(0, text.length - 1);
+  }
+  return text;
 }

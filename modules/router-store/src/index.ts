@@ -15,6 +15,11 @@ export {
   RouterNavigationPayload,
   RouterRequestAction,
   RouterRequestPayload,
+  routerCancelAction,
+  routerErrorAction,
+  routerNavigatedAction,
+  routerNavigationAction,
+  routerRequestAction,
 } from './actions';
 export { routerReducer, RouterReducerState } from './reducer';
 export {
@@ -24,10 +29,19 @@ export {
   NavigationActionTiming,
   ROUTER_CONFIG,
   DEFAULT_ROUTER_FEATURENAME,
+  RouterState,
 } from './router_store_module';
 export {
   RouterStateSerializer,
+  BaseRouterStoreState,
+} from './serializers/base';
+export {
   DefaultRouterStateSerializer,
   SerializedRouterStateSnapshot,
-  BaseRouterStoreState,
-} from './serializer';
+} from './serializers/default_serializer';
+export {
+  MinimalActivatedRouteSnapshot,
+  MinimalRouterStateSnapshot,
+  MinimalRouterStateSerializer,
+} from './serializers/minimal_serializer';
+export { getSelectors } from './router_selectors';

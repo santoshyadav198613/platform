@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { Store, MemoizedSelector } from '@ngrx/store';
+import { MemoizedSelector } from '@ngrx/store';
 import { cold } from 'jasmine-marbles';
-import { AuthGuard } from '@example-app/auth/services/auth-guard.service';
+import { AuthGuard } from '@example-app/auth/services';
 import * as fromAuth from '@example-app/auth/reducers';
 import { provideMockStore, MockStore } from '@ngrx/store/testing';
 
 describe('Auth Guard', () => {
   let guard: AuthGuard;
-  let store: MockStore<fromAuth.State>;
+  let store: MockStore;
   let loggedIn: MemoizedSelector<fromAuth.State, boolean>;
 
   beforeEach(() => {
@@ -15,10 +15,10 @@ describe('Auth Guard', () => {
       providers: [AuthGuard, provideMockStore()],
     });
 
-    store = TestBed.get(Store);
-    guard = TestBed.get(AuthGuard);
+    store = TestBed.inject(MockStore);
+    guard = TestBed.inject(AuthGuard);
 
-    loggedIn = store.overrideSelector(fromAuth.getLoggedIn, false);
+    loggedIn = store.overrideSelector(fromAuth.selectLoggedIn, false);
   });
 
   it('should return false if the user state is not logged in', () => {

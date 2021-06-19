@@ -1,4 +1,4 @@
-import { Inject, Injectable, InjectionToken, Optional } from '@angular/core';
+import { Inject, Injectable, Optional } from '@angular/core';
 
 import { createEntityDefinition, EntityDefinition } from './entity-definition';
 import {
@@ -6,7 +6,6 @@ import {
   EntityMetadataMap,
   ENTITY_METADATA_TOKEN,
 } from './entity-metadata';
-import { ENTITY_CACHE_NAME } from '../reducers/constants';
 
 export interface EntityDefinitions {
   [entityName: string]: EntityDefinition<any>;
@@ -24,7 +23,7 @@ export class EntityDefinitionService {
     entityMetadataMaps: EntityMetadataMap[]
   ) {
     if (entityMetadataMaps) {
-      entityMetadataMaps.forEach(map => this.registerMetadataMap(map));
+      entityMetadataMaps.forEach((map) => this.registerMetadataMap(map));
     }
   }
 
@@ -77,7 +76,7 @@ export class EntityDefinitionService {
    */
   registerMetadataMap(metadataMap: EntityMetadataMap = {}) {
     // The entity type name should be the same as the map key
-    Object.keys(metadataMap || {}).forEach(entityName =>
+    Object.keys(metadataMap || {}).forEach((entityName) =>
       this.registerMetadata({ entityName, ...metadataMap[entityName] })
     );
   }

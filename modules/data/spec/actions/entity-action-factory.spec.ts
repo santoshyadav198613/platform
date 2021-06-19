@@ -1,16 +1,14 @@
 import {
-  EntityAction,
   EntityActionOptions,
   EntityActionPayload,
   EntityOp,
   EntityActionFactory,
   MergeStrategy,
-  CorrelationIdGenerator,
 } from '../../';
 
 class Hero {
-  id: number;
-  name: string;
+  id!: number;
+  name!: string;
 }
 
 describe('EntityActionFactory', () => {
@@ -25,7 +23,7 @@ describe('EntityActionFactory', () => {
     const { entityName, entityOp, data } = action.payload;
     expect(entityName).toBe('Hero');
     expect(entityOp).toBe(EntityOp.QUERY_ALL);
-    expect(data).toBeUndefined('no data property');
+    expect(data).toBeUndefined();
   });
 
   it('#create should create an EntityAction with the given data', () => {

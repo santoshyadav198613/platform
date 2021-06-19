@@ -1,17 +1,10 @@
 import { Inject, Injectable, Optional } from '@angular/core';
 import { Action } from '@ngrx/store';
-import { Actions, Effect } from '@ngrx/effects';
+import { Actions, createEffect } from '@ngrx/effects';
 import { Update } from '@ngrx/entity';
 
 import { asyncScheduler, Observable, of, race, SchedulerLike } from 'rxjs';
-import {
-  concatMap,
-  catchError,
-  delay,
-  filter,
-  map,
-  mergeMap,
-} from 'rxjs/operators';
+import { catchError, delay, filter, map, mergeMap } from 'rxjs/operators';
 
 import { EntityAction } from '../actions/entity-action';
 import { EntityActionFactory } from '../actions/entity-action-factory';
@@ -43,18 +36,22 @@ export class EntityEffects {
   /**
    * Observable of non-null cancellation correlation ids from CANCEL_PERSIST actions
    */
-  @Effect({ dispatch: false })
-  cancel$: Observable<any> = this.actions.pipe(
-    ofEntityOp(EntityOp.CANCEL_PERSIST),
-    map((action: EntityAction) => action.payload.correlationId),
-    filter(id => id != null)
+  cancel$: Observable<any> = createEffect(
+    () =>
+      this.actions.pipe(
+        ofEntityOp(EntityOp.CANCEL_PERSIST),
+        map((action: EntityAction) => action.payload.correlationId),
+        filter((id) => id != null)
+      ),
+    { dispatch: false }
   );
 
-  @Effect()
   // `mergeMap` allows for concurrent requests which may return in any order
-  persist$: Observable<Action> = this.actions.pipe(
-    ofEntityOp(persistOps),
-    mergeMap(action => this.persist(action))
+  persist$: Observable<Action> = createEffect(() =>
+    this.actions.pipe(
+      ofEntityOp(persistOps),
+      mergeMap((action) => this.persist(action))
+    )
   );
 
   constructor(
@@ -89,8 +86,8 @@ export class EntityEffects {
       // Cancellation: returns Observable of CANCELED_PERSIST for a persistence EntityAction
       // whose correlationId matches cancellation correlationId
       const c = this.cancel$.pipe(
-        filter(id => action.payload.correlationId === id),
-        map(id =>
+        filter((id) => action.payload.correlationId === id),
+        map((id) =>
           this.entityActionFactory.createFromAction(action, {
             entityOp: EntityOp.CANCELED_PERSIST,
           })
@@ -133,7 +130,7 @@ export class EntityEffects {
       case EntityOp.SAVE_UPDATE_ONE:
         const { id, changes } = data as Update<any>; // data must be Update<T>
         return service.update(data).pipe(
-          map(updatedEntity => {
+          map((updatedEntity: any) => {
             // Return an Update<T> with updated entity data.
             // If server returned entity data, merge with the changes that were sent
             // and set the 'changed' flag to true.
@@ -151,7 +148,7 @@ export class EntityEffects {
 
       case EntityOp.SAVE_UPSERT_ONE:
         return service.upsert(data).pipe(
-          map(upsertedEntity => {
+          map((upsertedEntity: any) => {
             const hasData =
               upsertedEntity && Object.keys(upsertedEntity).length > 0;
             return hasData ? upsertedEntity : data; // ensure a returned entity value.

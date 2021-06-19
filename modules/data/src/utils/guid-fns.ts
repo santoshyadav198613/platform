@@ -1,26 +1,26 @@
-/*
-Client-side id-generators
+/**
+  Client-side id-generators
 
-These GUID utility functions are not used by ngrx-data itself at this time.
-They are included as candidates for generating persistable correlation ids if that becomes desirable.
-They are also safe for generating unique entity ids on the client.
+  These GUID utility functions are not used by @ngrx/data itself at this time.
+  They are included as candidates for generating persistable correlation ids if that becomes desirable.
+  They are also safe for generating unique entity ids on the client.
 
-Note they produce 32-character hexadecimal UUID strings,
-not the 128-bit representation found in server-side languages and databases.
+  Note they produce 32-character hexadecimal UUID strings,
+  not the 128-bit representation found in server-side languages and databases.
 
-These utilities are experimental and may be withdrawn or replaced in future.
+  These utilities are experimental and may be withdrawn or replaced in future.
 */
 
 /**
  * Creates a Universally Unique Identifier (AKA GUID)
  */
-export function getUuid() {
+function getUuid() {
   // The original implementation is based on this SO answer:
   // http://stackoverflow.com/a/2117523/200253
-  return 'xxxxxxxxxx4xxyxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    // tslint:disable-next-line:no-bitwise
+  return 'xxxxxxxxxx4xxyxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    // eslint-disable-next-line no-bitwise
     const r = (Math.random() * 16) | 0,
-      // tslint:disable-next-line:no-bitwise
+      // eslint-disable-next-line no-bitwise
       v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
@@ -54,8 +54,8 @@ export function getGuidComb(seed?: number) {
     -12
   );
   return (
-    'xxxxxxxxxx4xxyxxx'.replace(/[xy]/g, function(c) {
-      // tslint:disable:no-bitwise
+    'xxxxxxxxxx4xxyxxx'.replace(/[xy]/g, function (c) {
+      /* eslint-disable no-bitwise */
       const r = (Math.random() * 16) | 0,
         v = c === 'x' ? r : (r & 0x3) | 0x8;
       return v.toString(16);
@@ -65,13 +65,13 @@ export function getGuidComb(seed?: number) {
 
 // Sort comparison value that's good enough
 export function guidComparer(l: string, r: string) {
-  const l_low = l.slice(-12);
-  const r_low = r.slice(-12);
-  return l_low !== r_low
-    ? l_low < r_low
+  const lLow = l.slice(-12);
+  const rLow = r.slice(-12);
+  return lLow !== rLow
+    ? lLow < rLow
       ? -1
-      : +(l_low !== r_low)
+      : +(lLow !== rLow)
     : l < r
-      ? -1
-      : +(l !== r);
+    ? -1
+    : +(l !== r);
 }

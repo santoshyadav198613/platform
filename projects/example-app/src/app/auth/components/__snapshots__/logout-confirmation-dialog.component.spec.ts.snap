@@ -1,10 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Logout Confirmation Dialog should compile 1`] = `
-<ng-component>
+<ng-component
+  __ngContext__={[Function LRootView]}
+>
   <h2
     class="mat-dialog-title"
-    id="mat-dialog-title-0"
     mat-dialog-title=""
   >
     Logout
@@ -16,9 +17,8 @@ exports[`Logout Confirmation Dialog should compile 1`] = `
     class="mat-dialog-actions"
   >
     <button
-      class="mat-button"
+      class="mat-focus-indicator mat-button mat-button-base"
       mat-button=""
-      ng-reflect-dialog-result="false"
       type="button"
     >
       <span
@@ -26,21 +26,17 @@ exports[`Logout Confirmation Dialog should compile 1`] = `
       >
         Cancel
       </span>
-      <div
-        class="mat-button-ripple mat-ripple"
+      <span
+        class="mat-ripple mat-button-ripple"
         matripple=""
-        ng-reflect-centered="false"
-        ng-reflect-disabled="false"
-        ng-reflect-trigger="[object HTMLButtonElement]"
       />
-      <div
+      <span
         class="mat-button-focus-overlay"
       />
     </button>
     <button
-      class="mat-button"
+      class="mat-focus-indicator mat-button mat-button-base"
       mat-button=""
-      ng-reflect-dialog-result="true"
       type="button"
     >
       <span
@@ -48,14 +44,11 @@ exports[`Logout Confirmation Dialog should compile 1`] = `
       >
         OK
       </span>
-      <div
-        class="mat-button-ripple mat-ripple"
+      <span
+        class="mat-ripple mat-button-ripple"
         matripple=""
-        ng-reflect-centered="false"
-        ng-reflect-disabled="false"
-        ng-reflect-trigger="[object HTMLButtonElement]"
       />
-      <div
+      <span
         class="mat-button-focus-overlay"
       />
     </button>

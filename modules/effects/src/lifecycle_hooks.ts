@@ -26,7 +26,7 @@ import { Action } from '@ngrx/store';
  *
  * ```
  */
-export interface OnIdentifyEffects {
+export declare interface OnIdentifyEffects {
   /**
    * @description
    * String identifier to differentiate effect instances.
@@ -37,9 +37,11 @@ export interface OnIdentifyEffects {
 export const onIdentifyEffectsKey: keyof OnIdentifyEffects =
   'ngrxOnIdentifyEffects';
 
-export type onRunEffectsFn = (
-  resolvedEffects$: Observable<EffectNotification>
-) => Observable<EffectNotification>;
+export function isOnIdentifyEffects(
+  instance: any
+): instance is OnIdentifyEffects {
+  return isFunction(instance, onIdentifyEffectsKey);
+}
 
 /**
  * @description
@@ -68,15 +70,21 @@ export type onRunEffectsFn = (
  * }
  * ```
  */
-export interface OnRunEffects {
+export declare interface OnRunEffects {
   /**
    * @description
    * Method to control the lifecycle of effects.
    */
-  ngrxOnRunEffects: onRunEffectsFn;
+  ngrxOnRunEffects(
+    resolvedEffects$: Observable<EffectNotification>
+  ): Observable<EffectNotification>;
 }
 
 export const onRunEffectsKey: keyof OnRunEffects = 'ngrxOnRunEffects';
+
+export function isOnRunEffects(instance: any): instance is OnRunEffects {
+  return isFunction(instance, onRunEffectsKey);
+}
 
 /**
  * @description
@@ -98,7 +106,7 @@ export const onRunEffectsKey: keyof OnRunEffects = 'ngrxOnRunEffects';
  *  }
  * ```
  */
-export interface OnInitEffects {
+export declare interface OnInitEffects {
   /**
    * @description
    * Action to be dispatched after the effect is registered.
@@ -107,3 +115,15 @@ export interface OnInitEffects {
 }
 
 export const onInitEffects: keyof OnInitEffects = 'ngrxOnInitEffects';
+
+export function isOnInitEffects(instance: any): instance is OnInitEffects {
+  return isFunction(instance, onInitEffects);
+}
+
+function isFunction(instance: any, functionName: string) {
+  return (
+    instance &&
+    functionName in instance &&
+    typeof instance[functionName] === 'function'
+  );
+}

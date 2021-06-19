@@ -20,10 +20,11 @@ export abstract class ReducerObservable extends Observable<
   ActionReducer<any, any>
 > {}
 export abstract class ReducerManagerDispatcher extends ActionsSubject {}
-export const UPDATE = '@ngrx/store/update-reducers' as '@ngrx/store/update-reducers';
+export const UPDATE = '@ngrx/store/update-reducers' as const;
 
 @Injectable()
-export class ReducerManager extends BehaviorSubject<ActionReducer<any, any>>
+export class ReducerManager
+  extends BehaviorSubject<ActionReducer<any, any>>
   implements OnDestroy {
   constructor(
     private dispatcher: ReducerManagerDispatcher,
@@ -67,7 +68,7 @@ export class ReducerManager extends BehaviorSubject<ActionReducer<any, any>>
   }
 
   removeFeatures(features: StoreFeature<any, any>[]) {
-    this.removeReducers(features.map(p => p.key));
+    this.removeReducers(features.map((p) => p.key));
   }
 
   addReducer(key: string, reducer: ActionReducer<any, any>) {
@@ -84,7 +85,7 @@ export class ReducerManager extends BehaviorSubject<ActionReducer<any, any>>
   }
 
   removeReducers(featureKeys: string[]) {
-    featureKeys.forEach(key => {
+    featureKeys.forEach((key) => {
       this.reducers = omit(this.reducers, key) /*TODO(#823)*/ as any;
     });
     this.updateReducers(featureKeys);

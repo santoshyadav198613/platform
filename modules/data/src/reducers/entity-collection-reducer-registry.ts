@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from '@angular/core';
-import { ActionReducer, compose, MetaReducer } from '@ngrx/store';
+import { compose, MetaReducer } from '@ngrx/store';
 
 import { EntityAction } from '../actions/entity-action';
 import { EntityCollection } from './entity-collection';
@@ -32,6 +32,7 @@ export class EntityCollectionReducerRegistry {
     @Inject(ENTITY_COLLECTION_META_REDUCERS)
     entityCollectionMetaReducers?: MetaReducer<EntityCollection, EntityAction>[]
   ) {
+    // eslint-disable-next-line prefer-spread
     this.entityCollectionMetaReducer = compose.apply(
       null,
       entityCollectionMetaReducers || []
@@ -84,6 +85,6 @@ export class EntityCollectionReducerRegistry {
    */
   registerReducers(reducers: EntityCollectionReducers) {
     const keys = reducers ? Object.keys(reducers) : [];
-    keys.forEach(key => this.registerReducer(key, reducers[key]));
+    keys.forEach((key) => this.registerReducer(key, reducers[key]));
   }
 }

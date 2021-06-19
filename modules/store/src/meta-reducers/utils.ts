@@ -1,65 +1,5 @@
-export function getUnserializable(
-  target?: any,
-  path: string[] = []
-): false | { path: string[]; value: any } {
-  // Guard against undefined and null, e.g. a reducer that returns undefined
-  if ((isUndefined(target) || isNull(target)) && path.length === 0) {
-    return {
-      path: ['root'],
-      value: target,
-    };
-  }
-
-  const keys = Object.keys(target);
-  return keys.reduce<false | { path: string[]; value: any }>((result, key) => {
-    if (result) {
-      return result;
-    }
-
-    const value = (target as any)[key];
-
-    if (
-      isUndefined(value) ||
-      isNull(value) ||
-      isNumber(value) ||
-      isBoolean(value) ||
-      isString(value) ||
-      isArray(value)
-    ) {
-      return false;
-    }
-
-    if (isPlainObject(value)) {
-      return getUnserializable(value, [...path, key]);
-    }
-
-    return {
-      path: [...path, key],
-      value,
-    };
-  }, false);
-}
-
-export function throwIfUnserializable(
-  unserializable: false | { path: string[]; value: any },
-  context: 'state' | 'action'
-) {
-  if (unserializable === false) {
-    return;
-  }
-
-  const unserializablePath = unserializable.path.join('.');
-  const error: any = new Error(
-    `Detected unserializable ${context} at "${unserializablePath}"`
-  );
-  error.value = unserializable.value;
-  error.unserializablePath = unserializablePath;
-  throw error;
-}
-
-/**
- * Object Utilities
- */
+export const RUNTIME_CHECK_URL =
+  'https://ngrx.io/guide/store/configuration/runtime-checks';
 
 export function isUndefined(target: any): target is undefined {
   return target === undefined;
@@ -102,8 +42,12 @@ export function isPlainObject(target: any): target is object {
   return targetPrototype === Object.prototype || targetPrototype === null;
 }
 
-export function isFunction(target: any): target is Function {
+export function isFunction(target: any): target is () => void {
   return typeof target === 'function';
+}
+
+export function isComponent(target: any) {
+  return isFunction(target) && target.hasOwnProperty('ɵcmp');
 }
 
 export function hasOwnProperty(target: object, propertyName: string): boolean {

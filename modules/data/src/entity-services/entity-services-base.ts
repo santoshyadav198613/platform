@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 
 import { Observable } from 'rxjs';
@@ -6,23 +6,19 @@ import { Observable } from 'rxjs';
 import { EntityAction } from '../actions/entity-action';
 import { EntityCache } from '../reducers/entity-cache';
 import { EntityCollectionService } from './entity-collection-service';
-import { EntityCollectionServiceBase } from './entity-collection-service-base';
 import { EntityCollectionServiceFactory } from './entity-collection-service-factory';
 import { EntityCollectionServiceMap, EntityServices } from './entity-services';
-import { EntitySelectorsFactory } from '../selectors/entity-selectors';
-import {
-  EntitySelectors$,
-  EntitySelectors$Factory,
-} from '../selectors/entity-selectors$';
+import { EntitySelectors$ } from '../selectors/entity-selectors$';
 import { EntityServicesElements } from './entity-services-elements';
 
-// tslint:disable:member-ordering
+/* eslint-disable @typescript-eslint/member-ordering */
 
 /**
  * Base/default class of a central registry of EntityCollectionServices for all entity types.
  * Create your own subclass to add app-specific members for an improved developer experience.
  *
- * @example
+ * @usageNotes
+ * ```ts
  * export class EntityServices extends EntityServicesBase {
  *   constructor(entityServicesElements: EntityServicesElements) {
  *     super(entityServicesElements);
@@ -37,10 +33,11 @@ import { EntityServicesElements } from './entity-services-elements';
  *     this.dispatch(new ClearCompanyAction(companyId));
  *   }
  * }
+ * ```
  */
 @Injectable()
 export class EntityServicesBase implements EntityServices {
-  // Dear ngrx-data developer: think hard before changing the constructor.
+  // Dear @ngrx/data developer: think hard before changing the constructor.
   // Doing so will break apps that derive from this base class,
   // and many apps will derive from this class.
   //
@@ -141,11 +138,11 @@ export class EntityServicesBase implements EntityServices {
       | EntityCollectionService<any>[]
   ): void {
     if (Array.isArray(entityCollectionServices)) {
-      entityCollectionServices.forEach(service =>
+      entityCollectionServices.forEach((service) =>
         this.registerEntityCollectionService(service)
       );
     } else {
-      Object.keys(entityCollectionServices || {}).forEach(serviceName => {
+      Object.keys(entityCollectionServices || {}).forEach((serviceName) => {
         this.registerEntityCollectionService(
           entityCollectionServices[serviceName],
           serviceName

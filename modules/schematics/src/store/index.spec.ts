@@ -9,7 +9,7 @@ import {
   createWorkspace,
   defaultWorkspaceOptions,
   defaultAppOptions,
-} from '../../../schematics-core/testing';
+} from '@ngrx/schematics-core/testing';
 
 describe('Store Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
@@ -19,7 +19,6 @@ describe('Store Schematic', () => {
   const defaultOptions: StoreOptions = {
     name: 'foo',
     project: 'bar',
-    spec: true,
     module: undefined,
     flat: false,
     root: true,
@@ -29,14 +28,16 @@ describe('Store Schematic', () => {
 
   let appTree: UnitTestTree;
 
-  beforeEach(() => {
-    appTree = createWorkspace(schematicRunner, appTree);
+  beforeEach(async () => {
+    appTree = await createWorkspace(schematicRunner, appTree);
   });
 
-  it('should create the initial store setup', () => {
+  it('should create the initial store setup', async () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
 
     const files = tree.files;
 
@@ -45,7 +46,48 @@ describe('Store Schematic', () => {
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should create the initial store to specified project if provided', () => {
+  it('should skip the initial store setup files if the minimal flag is provided', async () => {
+    const options = {
+      ...defaultOptions,
+      module: 'app.module.ts',
+      minimal: true,
+    };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+    const files = tree.files;
+
+    expect(content).not.toMatch(
+      /import { reducers, metaReducers } from '\.\/reducers';/
+    );
+    expect(content).toMatch(/StoreModule.forRoot\({}\),/);
+    expect(files.indexOf(`${projectPath}/src/app/reducers/index.ts`)).toBe(-1);
+  });
+
+  it('should not skip the initial store setup files if the minimal flag is provided with a feature', async () => {
+    const options = {
+      ...defaultOptions,
+      root: false,
+      module: 'app.module.ts',
+      minimal: true,
+    };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+
+    expect(content).toMatch(
+      /StoreModule\.forFeature\(fromFoo.fooFeatureKey, fromFoo\.reducers, { metaReducers: fromFoo.metaReducers }\)/
+    );
+    expect(
+      tree.files.indexOf(`${projectPath}/src/app/reducers/index.ts`)
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should create the initial store to specified project if provided', async () => {
     const options = {
       ...defaultOptions,
       project: 'baz',
@@ -56,7 +98,9 @@ describe('Store Schematic', () => {
       name: 'baz',
     });
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const files = tree.files;
 
     expect(
@@ -64,7 +108,7 @@ describe('Store Schematic', () => {
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should create the initial store to defaultProject if project is not provided', () => {
+  it('should create the initial store to defaultProject if project is not provided', async () => {
     const options = {
       ...defaultOptions,
       project: undefined,
@@ -72,10 +116,12 @@ describe('Store Schematic', () => {
 
     const specifiedProjectPath = getTestProjectPath(defaultWorkspaceOptions, {
       ...defaultAppOptions,
-      name: defaultWorkspaceOptions.defaultProject,
+      name: 'bar',
     });
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
 
     const files = tree.files;
 
@@ -84,40 +130,48 @@ describe('Store Schematic', () => {
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it('should not be provided by default', () => {
+  it('should not be provided by default', async () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).not.toMatch(
       /import { reducers, metaReducers } from '\.\/reducers';/
     );
   });
 
-  it('should import into a specified module', () => {
+  it('should import into a specified module', async () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(
       /import { reducers, metaReducers } from '\.\/reducers';/
     );
   });
 
-  it('should import the environments correctly in the app module', () => {
+  it('should import the environments correctly in the app module', async () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(
       /import { environment } from '..\/environments\/environment';/
     );
   });
 
-  it('should import the environments correctly in the reducers', () => {
+  it('should import the environments correctly in the reducers', async () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/reducers/index.ts`
     );
@@ -126,82 +180,95 @@ describe('Store Schematic', () => {
     );
   });
 
-  it('should not import the environments in the reducers for a library', () => {
+  it('should not import the environments in the reducers for a library', async () => {
     const options = {
       ...defaultOptions,
       project: 'baz',
       module: 'baz.module.ts',
     };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(`/projects/baz/src/lib/reducers/index.ts`);
     expect(content).not.toMatch(/import { environment }/);
   });
 
-  it('should fail if specified module does not exist', () => {
+  it('should fail if specified module does not exist', async () => {
     const options = { ...defaultOptions, module: '/src/app/app.moduleXXX.ts' };
     let thrownError: Error | null = null;
     try {
-      schematicRunner.runSchematic('store', options, appTree);
+      await schematicRunner.runSchematicAsync('store', options, appTree);
     } catch (err) {
       thrownError = err;
     }
     expect(thrownError).toBeDefined();
   });
 
-  it('should import a feature a specified module', () => {
+  it('should import a feature a specified module', async () => {
     const options = { ...defaultOptions, root: false, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
+
     expect(content).toMatch(
-      /StoreModule\.forFeature\('foo', fromFoo\.reducers, { metaReducers: fromFoo.metaReducers }\)/
+      /StoreModule\.forFeature\(fromFoo.fooFeatureKey, fromFoo\.reducers, { metaReducers: fromFoo.metaReducers }\)/
     );
   });
 
-  it('should use a wildcard for a feature import ', () => {
+  it('should use a wildcard for a feature import ', async () => {
     const options = { ...defaultOptions, root: false, module: 'app.module.ts' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(`${projectPath}/src/app/app.module.ts`);
     expect(content).toMatch(/import \* as fromFoo from '\.\/reducers';/);
   });
 
-  it('should support a default root state interface name', () => {
+  it('should support a default root state interface name', async () => {
     const options = { ...defaultOptions, name: 'State' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/reducers/index.ts`
     );
     expect(content).toMatch(/export interface State {/);
   });
 
-  it('should support a custom root state interface name', () => {
+  it('should support a custom root state interface name', async () => {
     const options = {
       ...defaultOptions,
       name: 'State',
       stateInterface: 'AppState',
     };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/reducers/index.ts`
     );
     expect(content).toMatch(/export interface AppState {/);
   });
 
-  it('should support a default feature state interface name', () => {
+  it('should support a default feature state interface name', async () => {
     const options = { ...defaultOptions, root: false, name: 'Feature' };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/reducers/index.ts`
     );
     expect(content).toMatch(/export interface State {/);
   });
 
-  it('should support a custom feature state interface name', () => {
+  it('should support a custom feature state interface name', async () => {
     const options = {
       ...defaultOptions,
       root: false,
@@ -209,23 +276,33 @@ describe('Store Schematic', () => {
       stateInterface: 'FeatureState',
     };
 
-    const tree = schematicRunner.runSchematic('store', options, appTree);
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
     const content = tree.readContent(
       `${projectPath}/src/app/reducers/index.ts`
     );
     expect(content).toMatch(/export interface FeatureState {/);
   });
 
-  it('should fail if a feature state name is not specified', () => {
+  it('should fail if a feature state name is not specified', async () => {
     const options = {
       ...defaultOptions,
       name: undefined,
       root: false,
     };
 
-    expect(() => {
-      schematicRunner.runSchematic('store', options, appTree);
-    }).toThrowError('Please provide a name for the feature state');
+    let error = false;
+
+    try {
+      await schematicRunner
+        .runSchematicAsync('store', options, appTree)
+        .toPromise();
+    } catch (e) {
+      error = true;
+    }
+
+    expect(error).toBeTruthy();
   });
 
   it('should pass if a root state name is not specified', () => {
@@ -234,8 +311,63 @@ describe('Store Schematic', () => {
       name: undefined,
     };
 
-    expect(() => {
-      schematicRunner.runSchematic('store', options, appTree);
+    expect(async () => {
+      await schematicRunner
+        .runSchematicAsync('store', options, appTree)
+        .toPromise();
     }).not.toThrow();
+  });
+
+  it('should add a feature key if not root', async () => {
+    const options = { ...defaultOptions, root: false };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
+    const content = tree.readContent(
+      `${projectPath}/src/app/reducers/index.ts`
+    );
+    expect(content).toMatch(/fooFeatureKey = 'foo'/);
+  });
+
+  it('should not add a feature key if root', async () => {
+    const options = { ...defaultOptions };
+
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
+    const content = tree.readContent(
+      `${projectPath}/src/app/reducers/index.ts`
+    );
+    expect(content).not.toMatch(/fooFeatureKey = 'foo'/);
+  });
+
+  it('should add the initial config correctly into an empty module', async () => {
+    const options = {
+      ...defaultOptions,
+      module: 'empty.module.ts',
+    };
+
+    appTree.create(
+      `${projectPath}/src/app/empty.module.ts`,
+      `
+        import { NgModule } from '@angular/core';
+
+        @NgModule({
+          declarations: [],
+          imports: [],
+        })
+        export class EmptyModule {}
+      `
+    );
+
+    const tree = await schematicRunner
+      .runSchematicAsync('store', options, appTree)
+      .toPromise();
+    const content = tree.readContent(`${projectPath}/src/app/empty.module.ts`);
+
+    expect(content).toMatch(
+      /imports: \[StoreModule.forRoot\(reducers, { metaReducers }\), !environment.production \? StoreDevtoolsModule.instrument\(\) : \[\]\]/
+    );
   });
 });

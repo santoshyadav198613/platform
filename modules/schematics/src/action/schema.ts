@@ -5,6 +5,11 @@ export interface Schema {
   name: string;
 
   /**
+   * The prefix for the actions.
+   */
+  prefix: string;
+
+  /**
    * The path to create the component.
    */
   path?: string;
@@ -15,9 +20,9 @@ export interface Schema {
   project?: string;
 
   /**
-   * Specifies if a spec file is generated.
+   * When true, does not create test files.
    */
-  spec?: boolean;
+  skipTests?: boolean;
 
   /**
    * Flag to indicate if a dir is created.

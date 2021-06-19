@@ -9,36 +9,43 @@ workspace(name = "ngrx")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# Rules for NodeJS
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "213dcf7e72f3acd4d1e369b7a356f3e5d9560f380bd655b13b7c0ea425d7c419",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.9/rules_nodejs-0.27.9.tar.gz"],
+    sha256 = "d14076339deb08e5460c221fae5c5e9605d2ef4848eee1f0c81c9ffdc1ab31c1",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/1.6.1/rules_nodejs-1.6.1.tar.gz"],
 )
 
+# Rules for web testing
 http_archive(
     name = "io_bazel_rules_webtesting",
-    sha256 = "1c0900547bdbe33d22aa258637dc560ce6042230e41e9ea9dad5d7d2fca8bc42",
-    urls = ["https://github.com/bazelbuild/rules_webtesting/releases/download/0.3.0/rules_webtesting.tar.gz"],
+    sha256 = "f1f4d2c2f88d2beac64c82499a1e762b037966675dd892da89c87e39d72b33f6",
+    urls = [
+        "https://github.com/bazelbuild/rules_webtesting/releases/download/0.3.2/rules_webtesting.tar.gz",
+    ],
 )
 
 # Rules for compiling sass
 http_archive(
     name = "io_bazel_rules_sass",
-    sha256 = "d8b89e47b05092a6eed3fa199f2de7cf671a4b9165d0bf38f12a0363dda928d3",
-    strip_prefix = "rules_sass-1.14.1",
-    url = "https://github.com/bazelbuild/rules_sass/archive/1.14.1.zip",
+    sha256 = "77e241148f26d5dbb98f96fe0029d8f221c6cb75edbb83e781e08ac7f5322c5f",
+    strip_prefix = "rules_sass-1.24.0",
+    urls = [
+        "https://github.com/bazelbuild/rules_sass/archive/1.24.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_sass/archive/1.24.0.zip",
+    ],
 )
 
 ####################################
 # Load and install our dependencies downloaded above.
 
-load("@build_bazel_rules_nodejs//:defs.bzl", "check_bazel_version", "node_repositories", "yarn_install")
+load("@build_bazel_rules_nodejs//:index.bzl", "check_bazel_version", "check_rules_nodejs_version", "yarn_install")
 
-check_bazel_version(minimum_bazel_version = "0.24.0")
+check_rules_nodejs_version(minimum_version_string = "1.6.0")
 
-node_repositories(
-    node_version = "10.9.0",
-    yarn_version = "1.9.2",
+check_bazel_version(
+    message = "The minimum bazel version to use with this repo is 1.0.0",
+    minimum_bazel_version = "1.1.0",
 )
 
 yarn_install(
@@ -48,23 +55,29 @@ yarn_install(
     yarn_lock = "//:yarn.lock",
 )
 
+# Install all bazel dependencies of the @ngdeps npm packages
 load("@npm//:install_bazel_dependencies.bzl", "install_bazel_dependencies")
 
 install_bazel_dependencies()
 
-load("@io_bazel_rules_webtesting//web:repositories.bzl", "browser_repositories", "web_test_repositories")
+# Setup web testing
+load("@io_bazel_rules_webtesting//web:repositories.bzl", "web_test_repositories")
 
 web_test_repositories()
+
+load("@io_bazel_rules_webtesting//web/versioned:browsers-0.3.2.bzl", "browser_repositories")
 
 browser_repositories(
     chromium = True,
     firefox = True,
 )
 
-load("@npm_bazel_typescript//:defs.bzl", "ts_setup_workspace")
+# Setup TypeScript Bazel workspace
+load("@npm_bazel_typescript//:index.bzl", "ts_setup_workspace")
 
 ts_setup_workspace()
 
+# Setup the Sass rule repositories
 load("@io_bazel_rules_sass//sass:sass_repositories.bzl", "sass_repositories")
 
 sass_repositories()

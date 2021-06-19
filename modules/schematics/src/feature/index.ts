@@ -7,7 +7,7 @@ import {
 } from '@angular-devkit/schematics';
 import { Schema as FeatureOptions } from './schema';
 
-export default function(options: FeatureOptions): Rule {
+export default function (options: FeatureOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     return chain([
       schematic('action', {
@@ -16,7 +16,7 @@ export default function(options: FeatureOptions): Rule {
         name: options.name,
         path: options.path,
         project: options.project,
-        spec: false,
+        skipTests: options.skipTests,
         api: options.api,
         creators: options.creators,
       }),
@@ -27,7 +27,7 @@ export default function(options: FeatureOptions): Rule {
         name: options.name,
         path: options.path,
         project: options.project,
-        spec: options.spec,
+        skipTests: options.skipTests,
         reducers: options.reducers,
         feature: true,
         api: options.api,
@@ -40,10 +40,19 @@ export default function(options: FeatureOptions): Rule {
         name: options.name,
         path: options.path,
         project: options.project,
-        spec: options.spec,
+        skipTests: options.skipTests,
         feature: true,
         api: options.api,
         creators: options.creators,
+      }),
+      schematic('selector', {
+        flat: options.flat,
+        group: options.group,
+        name: options.name,
+        path: options.path,
+        project: options.project,
+        skipTests: options.skipTests,
+        feature: true,
       }),
     ])(host, context);
   };

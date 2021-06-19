@@ -18,6 +18,7 @@ import {
   ROUTER_NAVIGATED,
   ROUTER_NAVIGATION,
   ROUTER_REQUEST,
+  routerNavigationAction,
   RouterAction,
   routerReducer,
   RouterReducerState,
@@ -38,7 +39,7 @@ describe('integration spec', () => {
 
     createTestModule({ reducers: { reducer } });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -113,7 +114,7 @@ describe('integration spec', () => {
       ) => state.url !== 'next',
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     const hasRouterState = (action: RouterAction<any>) =>
@@ -148,7 +149,7 @@ describe('integration spec', () => {
 
     createTestModule({ reducers: { reducer } });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -157,7 +158,7 @@ describe('integration spec', () => {
         log.splice(0);
         return router.navigateByUrl('next');
       })
-      .catch(e => {
+      .catch((e) => {
         expect(e.message).toEqual('You shall not pass!');
         expect(log).toEqual([
           { type: 'router', event: 'NavigationStart', url: '/next' },
@@ -167,6 +168,32 @@ describe('integration spec', () => {
 
         done();
       });
+  });
+
+  it('should ignore routing actions for the URL that is currently open', async () => {
+    createTestModule({
+      reducers: { router: routerReducer },
+    });
+
+    const router = TestBed.inject(Router);
+    const store = TestBed.inject(Store);
+    const navigateByUrlSpy = jest.spyOn(router, 'navigateByUrl');
+
+    await router.navigateByUrl('/');
+
+    const SAME_URL_WITHOUT_SLASH = '';
+
+    store.dispatch(
+      routerNavigationAction({
+        payload: {
+          routerState: { url: SAME_URL_WITHOUT_SLASH, root: {} as any },
+          event: { id: 123 } as any,
+        },
+      })
+    );
+
+    //                         Navigates only ONCE 👇
+    expect(navigateByUrlSpy.mock.calls.length).toBe(1);
   });
 
   it('should support rolling back if navigation gets canceled (navigation initialized through router)', (done: any) => {
@@ -192,7 +219,7 @@ describe('integration spec', () => {
       canActivate: () => false,
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -201,7 +228,7 @@ describe('integration spec', () => {
         log.splice(0);
         return router.navigateByUrl('next');
       })
-      .then(r => {
+      .then((r) => {
         expect(r).toEqual(false);
 
         expect(log).toEqual([
@@ -271,8 +298,8 @@ describe('integration spec', () => {
       config: { stateKey: 'reducer' },
     });
 
-    const router: Router = TestBed.get(Router);
-    const store: Store<any> = TestBed.get(Store);
+    const router = TestBed.inject(Router);
+    const store = TestBed.inject(Store);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -330,7 +357,7 @@ describe('integration spec', () => {
       },
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -339,7 +366,7 @@ describe('integration spec', () => {
         log.splice(0);
         return router.navigateByUrl('next');
       })
-      .catch(e => {
+      .catch((e) => {
         expect(e.message).toEqual('BOOM!');
 
         expect(log).toEqual([
@@ -417,8 +444,8 @@ describe('integration spec', () => {
       config: { stateKey: 'reducer' },
     });
 
-    const router: Router = TestBed.get(Router);
-    const store: Store<any> = TestBed.get(Store);
+    const router = TestBed.inject(Router);
+    const store = TestBed.inject(Store);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -460,8 +487,8 @@ describe('integration spec', () => {
 
     createTestModule({ reducers: { router: routerReducer, reducer } });
 
-    const router = TestBed.get(Router);
-    const store = TestBed.get(Store);
+    const router = TestBed.inject(Router);
+    const store = TestBed.inject(Store);
     const log = logOfRouterAndActionsAndStore();
 
     const routerReducerStates: any[] = [];
@@ -565,7 +592,7 @@ describe('integration spec', () => {
       canLoad: () => false,
     });
 
-    const router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router.navigateByUrl('/load').then((r: boolean) => {
@@ -573,7 +600,7 @@ describe('integration spec', () => {
 
       expect(log).toEqual([
         { type: 'store', state: null }, // initial state
-        { type: 'store', state: null }, // ROUTER_REQEST event in the store
+        { type: 'store', state: null }, // ROUTER_REQUEST event in the store
         { type: 'action', action: ROUTER_REQUEST },
         { type: 'router', event: 'NavigationStart', url: '/load' },
         { type: 'store', state: { url: '', navigationId: 1 } },
@@ -597,7 +624,7 @@ describe('integration spec', () => {
       canLoad: () => Promise.reject('boom'),
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -605,7 +632,7 @@ describe('integration spec', () => {
       .then(() => {
         fail(`Shouldn't be called`);
       })
-      .catch(err => {
+      .catch((err) => {
         expect(err).toBe('boom');
 
         expect(log).toEqual([
@@ -670,7 +697,7 @@ describe('integration spec', () => {
       createTestModule({ reducers: { routerReducer, reducer }, providers });
     }
 
-    const router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -721,15 +748,12 @@ describe('integration spec', () => {
       reducers: { routerReducer },
       canActivate: () => {
         store.dispatch({ type: 'USER_EVENT' });
-        return store.pipe(
-          take(1),
-          mapTo(true)
-        );
+        return store.pipe(take(1), mapTo(true));
       },
     });
 
-    const router: Router = TestBed.get(Router);
-    const store: Store<any> = TestBed.get(Store);
+    const router = TestBed.inject(Router);
+    const store = TestBed.inject(Store);
     const log = logOfRouterAndActionsAndStore();
 
     router
@@ -776,7 +800,7 @@ describe('integration spec', () => {
       config: { stateKey: 'router-reducer' },
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore({ stateKey: 'router-reducer' });
 
     router
@@ -838,7 +862,7 @@ describe('integration spec', () => {
       config: { stateKey: (state: any) => state.routerReducer },
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore({
       stateKey: (state: any) => state.routerReducer,
     });
@@ -902,8 +926,8 @@ describe('integration spec', () => {
       config: { stateKey: 'reducer' },
     });
 
-    const router: Router = TestBed.get(Router);
-    const store = TestBed.get(Store);
+    const router = TestBed.inject(Router);
+    const store = TestBed.inject(Store);
     const log = logOfRouterAndActionsAndStore();
 
     store.dispatch({
@@ -959,7 +983,7 @@ describe('integration spec', () => {
       config: { navigationActionTiming: NavigationActionTiming.PostActivation },
     });
 
-    const router: Router = TestBed.get(Router);
+    const router = TestBed.inject(Router);
     const log = logOfRouterAndActionsAndStore();
 
     router.navigateByUrl('/').then(() => {
@@ -987,7 +1011,7 @@ describe('integration spec', () => {
 function waitForNavigation(router: Router, event: any = NavigationEnd) {
   return router.events
     .pipe(
-      filter(e => e instanceof event),
+      filter((e) => e instanceof event),
       first()
     )
     .toPromise();
@@ -1005,12 +1029,12 @@ function logOfRouterAndActionsAndStore(
     stateKey: 'reducer',
   }
 ): any[] {
-  const router: Router = TestBed.get(Router);
-  const store: Store<any> = TestBed.get(Store);
+  const router = TestBed.inject(Router);
+  const store = TestBed.inject(Store);
   // Not using effects' Actions to avoid @ngrx/effects dependency
-  const actions$: ScannedActionsSubject = TestBed.get(ScannedActionsSubject);
+  const actions$ = TestBed.inject(ScannedActionsSubject);
   const log: any[] = [];
-  router.events.subscribe(e => {
+  router.events.subscribe((e) => {
     if (e.hasOwnProperty('url')) {
       log.push({
         type: 'router',
@@ -1019,10 +1043,10 @@ function logOfRouterAndActionsAndStore(
       });
     }
   });
-  actions$.subscribe(action =>
+  actions$.subscribe((action) =>
     log.push({ type: 'action', action: action.type })
   );
-  store.subscribe(store => {
+  store.subscribe((store) => {
     if (typeof options.stateKey === 'function') {
       log.push({ type: 'store', state: options.stateKey(store) });
     } else {

@@ -7,12 +7,12 @@ import {
 import { Action } from '@ngrx/store';
 
 import { DevtoolsExtension, ReduxDevtoolsExtension } from '../src/extension';
-import { createConfig } from '../src/config';
+import { createConfig, DevToolsFeatureOptions } from '../src/config';
 import { unliftState } from '../src/utils';
 
 function createOptions(
   name: string = 'NgRx Store DevTools',
-  features: any = {
+  features: DevToolsFeatureOptions = {
     pause: true,
     lock: true,
     persist: true,
@@ -25,12 +25,14 @@ function createOptions(
     test: true,
   },
   serialize: boolean | undefined = false,
-  maxAge: false | number = false
+  maxAge: false | number = false,
+  autoPause: boolean = false
 ) {
   const options: ReduxDevtoolsExtensionConfig = {
     name,
     features,
     serialize,
+    autoPause,
   };
   if (maxAge !== false /* support === 0 */) {
     options.maxAge = maxAge;
@@ -71,14 +73,18 @@ describe('DevtoolsExtension', () => {
   let devtoolsExtension: DevtoolsExtension;
 
   beforeEach(() => {
-    extensionConnection = jasmine.createSpyObj(
-      'reduxDevtoolsExtensionConnection',
-      ['init', 'subscribe', 'unsubscribe', 'send']
-    );
-    reduxDevtoolsExtension = jasmine.createSpyObj('reduxDevtoolsExtension', [
-      'send',
-      'connect',
-    ]);
+    extensionConnection = {
+      init: jasmine.createSpy('init'),
+      subscribe: jasmine.createSpy('subscribe'),
+      unsubscribe: jasmine.createSpy('unsubscribe'),
+      send: jasmine.createSpy('send'),
+      error: jasmine.createSpy('error'),
+    };
+
+    reduxDevtoolsExtension = {
+      send: jasmine.createSpy('send'),
+      connect: jasmine.createSpy('connect'),
+    };
     (reduxDevtoolsExtension.connect as jasmine.Spy).and.returnValue(
       extensionConnection
     );
@@ -109,9 +115,9 @@ describe('DevtoolsExtension', () => {
       reduxDevtoolsExtension,
       createConfig({
         name: 'ngrx-store-devtool-todolist',
-        features: 'some features',
         maxAge: 10,
         serialize: true,
+        autoPause: true,
         // these two should not be added
         actionSanitizer: myActionSanitizer,
         stateSanitizer: myStateSanitizer,
@@ -122,9 +128,10 @@ describe('DevtoolsExtension', () => {
     devtoolsExtension.actions$.subscribe(() => null);
     const options = createOptions(
       'ngrx-store-devtool-todolist',
-      'some features',
+      undefined,
       true,
-      10
+      10,
+      true
     );
     expect(reduxDevtoolsExtension.connect).toHaveBeenCalledWith(options);
   });
@@ -172,7 +179,6 @@ describe('DevtoolsExtension', () => {
         reduxDevtoolsExtension,
         createConfig({
           name: 'ngrx-store-devtool-todolist',
-          features: 'some features',
           maxAge: 10,
           serialize: true,
           // these two should not be added
@@ -181,9 +187,10 @@ describe('DevtoolsExtension', () => {
         }),
         <any>null
       );
+
       const options = createOptions(
         'ngrx-store-devtool-todolist',
-        'some features',
+        undefined,
         true,
         10
       );
@@ -375,14 +382,15 @@ describe('DevtoolsExtension', () => {
     });
 
     describe('with Action and actionsBlocklist', () => {
-      const NORMAL_ACTION = 'NORMAL_ACTION';
-      const BLOCKED_ACTION = 'BLOCKED_ACTION';
+      const NORMAL_ACTION = '[Test] NORMAL_ACTION';
+      const BLOCKED_ACTION_1 = '[Test] BLOCKED_ACTION #1';
+      const BLOCKED_ACTION_2 = '[Test] BLOCKED_ACTION #2';
 
       beforeEach(() => {
         devtoolsExtension = new DevtoolsExtension(
           reduxDevtoolsExtension,
           createConfig({
-            actionsBlocklist: [BLOCKED_ACTION],
+            actionsBlocklist: [BLOCKED_ACTION_1, BLOCKED_ACTION_2],
           }),
           <any>null
         );
@@ -403,22 +411,28 @@ describe('DevtoolsExtension', () => {
           state
         );
         devtoolsExtension.notify(
-          new PerformAction({ type: BLOCKED_ACTION }, 1234567),
+          new PerformAction({ type: BLOCKED_ACTION_1 }, 1234567),
           state
         );
+        devtoolsExtension.notify(
+          new PerformAction({ type: BLOCKED_ACTION_2 }, 1234567),
+          state
+        );
+
         expect(extensionConnection.send).toHaveBeenCalledTimes(2);
       });
     });
 
     describe('with Action and actionsSafelist', () => {
-      const NORMAL_ACTION = 'NORMAL_ACTION';
-      const SAFE_ACTION = 'SAFE_ACTION';
+      const NORMAL_ACTION = '[Test] NORMAL_ACTION';
+      const SAFE_ACTION_1 = '[Test] SAFE_ACTION #1';
+      const SAFE_ACTION_2 = '[Test] SAFE_ACTION #2';
 
       beforeEach(() => {
         devtoolsExtension = new DevtoolsExtension(
           reduxDevtoolsExtension,
           createConfig({
-            actionsSafelist: [SAFE_ACTION],
+            actionsSafelist: [SAFE_ACTION_1, SAFE_ACTION_2],
           }),
           <any>null
         );
@@ -439,10 +453,15 @@ describe('DevtoolsExtension', () => {
           state
         );
         devtoolsExtension.notify(
-          new PerformAction({ type: SAFE_ACTION }, 1234567),
+          new PerformAction({ type: SAFE_ACTION_1 }, 1234567),
           state
         );
-        expect(extensionConnection.send).toHaveBeenCalledTimes(1);
+        devtoolsExtension.notify(
+          new PerformAction({ type: SAFE_ACTION_2 }, 1234567),
+          state
+        );
+
+        expect(extensionConnection.send).toHaveBeenCalledTimes(2);
       });
     });
 

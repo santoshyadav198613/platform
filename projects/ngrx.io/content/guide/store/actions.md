@@ -18,7 +18,7 @@ interface Action {
 
 The interface has a single property, the `type`, represented as a string. The `type` property is for describing the action that will be dispatched in your application. The value of the type comes in the form of `[Source] Event` and is used to provide a context of what category of action it is, and where an action was dispatched from. You add properties to an action to provide additional context or metadata for an action.
 
-Listed below are examples of actions written as plain javascript objects (POJOS):
+Listed below are examples of actions written as plain old JavaScript objects (POJOs):
 
 ```json
 {
@@ -81,30 +81,9 @@ The returned action has very specific context about where the action came from a
 
 <div class="alert is-important">
 
-**Note:** You can also write actions using classes, which was the previously defined way before action creators were introduced in NgRx. If 
-you are looking for examples of action classes, visit the documentation for [versions 7.x and prior](https://v7.ngrx.io/guide/store/actions).
+**Note:** You can also write actions using class-based action creators, which was the previously defined way before action creators were introduced in NgRx. If you are looking for examples of class-based action creators, visit the documentation for [versions 7.x and prior](https://v7.ngrx.io/guide/store/actions).
 
 </div>
-
-## Creating action unions
-
-The consumers of actions, whether it be reducers or effects use the type information from an action to determine whether they need to handle the action. Actions are grouped together by feature area, but also need to expose the action type information. Looking at the previous example of the `[Login Page] Login` action, you'll define some additional type information for the actions.
-
-<code-example header="login-page.actions.ts">
-import { createAction, props, union } from '@ngrx/store';
-
-export const AuthActions = {
-  login: createAction(
-    '[Login Page] Login',
-    props&lt;{ username: string; password: string }&gt;()
-  )
-};
-
-const all = union(AuthActions);
-export type AuthActions = typeof all;
-</code-example>
-
-The exported `AuthActions` is a merged interface of the map of action creators and the union type. The exported type allows you to take advantage of [discriminated unions](https://www.typescriptlang.org/docs/handbook/advanced-types.html) in TypeScript. Why this is important is covered in the [reducers](guide/store/reducers) guide.
 
 ## Next Steps
 

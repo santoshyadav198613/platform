@@ -32,7 +32,7 @@ Use creator functions for actions
 - `--creators`
   - Alias: `-c`
   - Type: `boolean`
-  - Default: `false`
+  - Default: `true`
 
 Nest the actions file within a folder based on the action `name`.
 
@@ -56,16 +56,22 @@ Specifies if api success and failure actions should be generated.
 
 Generate a spec file alongside the action file.
 
-- `--spec`
+- `--skip-tests`
   - Type: `boolean`
   - Default: `false`
+
+Specify the prefix for the actions.
+
+- `--prefix`
+  - Type: `string`
+  - Default: `load`
 
 ## Examples
 
 Generate a `User` actions file with an associated spec file.
 
 ```sh
-ng generate action User --spec
+ng generate action User
 ```
 
 Generate a `User` actions file within a nested folder

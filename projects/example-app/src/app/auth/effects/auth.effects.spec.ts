@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Actions } from '@ngrx/effects';
 import { provideMockActions } from '@ngrx/effects/testing';
@@ -11,9 +11,9 @@ import {
   AuthApiActions,
 } from '@example-app/auth/actions';
 
-import { Credentials, User } from '@example-app/auth/models/user';
-import { AuthService } from '@example-app/auth/services/auth.service';
-import { AuthEffects } from '@example-app/auth/effects/auth.effects';
+import { Credentials, User } from '@example-app/auth/models';
+import { AuthService } from '@example-app/auth/services';
+import { AuthEffects } from '@example-app/auth/effects';
 
 describe('AuthEffects', () => {
   let effects: AuthEffects;
@@ -44,11 +44,11 @@ describe('AuthEffects', () => {
       ],
     });
 
-    effects = TestBed.get(AuthEffects);
-    authService = TestBed.get(AuthService);
-    actions$ = TestBed.get(Actions);
-    routerService = TestBed.get(Router);
-    dialog = TestBed.get(MatDialog);
+    effects = TestBed.inject(AuthEffects);
+    authService = TestBed.inject(AuthService);
+    actions$ = TestBed.inject(Actions);
+    routerService = TestBed.inject(Router);
+    dialog = TestBed.inject(MatDialog);
 
     spyOn(routerService, 'navigate').and.callThrough();
   });

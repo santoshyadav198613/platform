@@ -1,14 +1,13 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "SchematicsNgRxRouterStore",
+  "$id": "SchematicsNgRxRouterStore",
   "title": "NgRx Router Store Schema",
   "type": "object",
   "properties": {
     "skipPackageJson": {
       "type": "boolean",
       "default": false,
-      "description":
-        "Do not add @ngrx/router-store as dependency to package.json (e.g., --skipPackageJson)."
+      "description": "Do not add @ngrx/router-store as dependency to package.json (e.g., --skipPackageJson)."
     },
     "path": {
       "type": "string",

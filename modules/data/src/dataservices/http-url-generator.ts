@@ -1,4 +1,4 @@
-import { Inject, Injectable, InjectionToken, Optional } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Pluralizer } from '../utils/interfaces';
 
 /**
@@ -131,5 +131,5 @@ export class DefaultHttpUrlGenerator implements HttpUrlGenerator {
 
 /** Remove leading & trailing spaces or slashes */
 export function normalizeRoot(root: string) {
-  return root.replace(/^[\/\s]+|[\/\s]+$/g, '');
+  return root.replace(/^[/\s]+|[/\s]+$/g, '');
 }

@@ -1,15 +1,9 @@
 import { ErrorHandler } from '@angular/core';
-import {
-  Action,
-  ActionReducer,
-  ActionsSubject,
-  ReducerManager,
-  UPDATE,
-  INIT,
-} from '@ngrx/store';
+import { Action, ActionReducer, UPDATE, INIT } from '@ngrx/store';
+
 import { difference, liftAction, isActionFiltered } from './utils';
 import * as DevtoolsActions from './actions';
-import { StoreDevtoolsConfig, StateSanitizer } from './config';
+import { StoreDevtoolsConfig } from './config';
 import { PerformAction } from './actions';
 
 export type InitAction = {
@@ -25,7 +19,7 @@ export type Actions = DevtoolsActions.All | CoreActions;
 
 export const INIT_ACTION = { type: INIT };
 
-export const RECOMPUTE = '@ngrx/store-devtools/recompute' as '@ngrx/store-devtools/recompute';
+export const RECOMPUTE = '@ngrx/store-devtools/recompute' as const;
 export const RECOMPUTE_ACTION = { type: RECOMPUTE };
 
 export interface ComputedState {
@@ -78,7 +72,7 @@ function computeNextEntry(
     nextState = reducer(state, action);
   } catch (err) {
     nextError = err.toString();
-    errorHandler.handleError(err.stack || err);
+    errorHandler.handleError(err);
   }
 
   return {
@@ -189,8 +183,7 @@ export function liftReducerWith(
       computedStates,
       isLocked,
       isPaused,
-    } =
-      liftedState || initialLiftedState;
+    } = liftedState || initialLiftedState;
 
     if (!liftedState) {
       // Prevent mutating initialLiftedState
@@ -214,7 +207,7 @@ export function liftReducerWith(
       }
 
       skippedActionIds = skippedActionIds.filter(
-        id => idsToDelete.indexOf(id) === -1
+        (id) => idsToDelete.indexOf(id) === -1
       );
       stagedActionIds = [0, ...stagedActionIds.slice(excess + 1)];
       committedState = computedStates[excess].state;
@@ -308,7 +301,7 @@ export function liftReducerWith(
         if (index === -1) {
           skippedActionIds = [actionId, ...skippedActionIds];
         } else {
-          skippedActionIds = skippedActionIds.filter(id => id !== actionId);
+          skippedActionIds = skippedActionIds.filter((id) => id !== actionId);
         }
         // Optimization: we know history before this action hasn't changed
         minInvalidatedStateIndex = stagedActionIds.indexOf(actionId);
@@ -422,8 +415,7 @@ export function liftReducerWith(
           currentStateIndex,
           computedStates,
           isLocked,
-          // prettier-ignore
-          isPaused
+          isPaused,
         } = liftedAction.nextLiftedState);
         break;
       }
@@ -455,7 +447,7 @@ export function liftReducerWith(
       }
       case UPDATE: {
         const stateHasErrors =
-          computedStates.filter(state => state.error).length > 0;
+          computedStates.filter((state) => state.error).length > 0;
 
         if (stateHasErrors) {
           // Recompute all states
@@ -512,7 +504,7 @@ export function liftReducerWith(
           }
 
           // Recompute state history with latest reducer and update action
-          computedStates = computedStates.map(cmp => ({
+          computedStates = computedStates.map((cmp) => ({
             ...cmp,
             state: reducer(cmp.state, RECOMPUTE_ACTION),
           }));

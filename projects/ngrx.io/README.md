@@ -52,6 +52,19 @@ Running `yarn start` (even when explicitly targeting production mode) does not s
 ServiceWorker. If you want to test the ServiceWorker locally, you can use `yarn build` and then
 serve the files in `dist/` with `yarn http-server dist -p 4200`.
 
+## Running on Docker
+
+The ngrx.io sample project can run as a docker container. 
+In order to run ngrx.io on docker, use the following commands (**run commands from the platform folder**):
+* `docker build -t ngrx-docs:7.4.0 .` - building the ngrx.io app image
+* `docker run -p <host-port>:4200 ngrx-docs:7.4.0` - starting the container, listening on *<host-port>* for your choice.
+
+The container will run the documentation app with the script `start:docker` with the **stable configuration** and with 0.0.0.0
+host support.
+* Saving the image for later offline usage is available by building the container and then using `sudo docker save ngrx-docs:7.4.0 > <tar-name>.tar`
+and loading it afterwards with `sudo docker load < <tar-name>.tar`.
+> tested on ubuntu 18.04.2 with Docker 18.09.4
+
 ## Guide to authoring
 
 There are two types of content in the documentation:
@@ -90,7 +103,7 @@ You also want to see those changes displayed properly in the doc viewer
 with a quick, edit/view cycle time.
 
 For this purpose, use the `yarn docs-watch` task, which watches for changes to source files and only
-re-processes the the files necessary to generate the docs that are related to the file that has changed.
+re-processes the files necessary to generate the docs that are related to the file that has changed.
 Since this task takes shortcuts, it is much faster (often less than 1 second) but it won't produce full
 fidelity content. For example, links to other docs and code examples may not render correctly. This is
 most particularly noticed in links to other docs and in the embedded examples, which may not always render

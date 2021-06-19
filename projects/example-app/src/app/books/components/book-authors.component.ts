@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 
-import { Book } from '@example-app/books/models/book';
+import { Book } from '@example-app/books/models';
 
 @Component({
   selector: 'bc-book-authors',
@@ -19,7 +19,7 @@ import { Book } from '@example-app/books/models/book';
   ],
 })
 export class BookAuthorsComponent {
-  @Input() book: Book;
+  @Input() book!: Book;
 
   get authors() {
     return this.book.volumeInfo.authors;
